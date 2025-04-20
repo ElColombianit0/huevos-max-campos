@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Huevos Max Campos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1 class="page-title">Huevos Max Campos</h1>
+    <div class="main">
+        <input type="checkbox" id="chk" aria-hidden="true">
+
+        <!-- REGISTRO -->
+        <div class="signup">
+            <form method="POST" action="{{ url_for('register_user') }}">
+                <label for="chk" aria-hidden="true">Registrarse</label>
+                {% if signup_error %}
+                    <p style="color: red; text-align: center;">{{ signup_error }}</p>
+                {% endif %}
+                <input type="text" name="numero_documento" placeholder="Número de cédula" required>
+                <input type="text" name="nombre_completo" placeholder="Nombre completo" required>
+                <input type="text" name="numero_contacto" placeholder="Número de contacto" required>
+                <input type="email" name="correo" placeholder="Correo electrónico" required>
+                <select name="tipo_persona" required>
+                    <option value="">Tipo de persona</option>
+                    <option value="natural">Natural</option>
+                    <option value="juridica">Jurídica</option>
+                </select>
+                <input type="password" name="password" placeholder="Contraseña" required>
+                <button type="submit">Registrarse</button>
+                <p class="switch-form">¿Ya tienes cuenta? <a href="#" onclick="document.getElementById('chk').checked = false;">Iniciar Sesión</a></p>
+            </form>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="login">
+            <form method="POST" action="{{ url_for('login') }}">
+                <label for="chk" aria-hidden="true">Iniciar Sesión</label>
+                {% if error %}
+                    <p style="color: red; text-align: center;">{{ error }}</p>
+                {% endif %}
+                <input type="email" name="correo" placeholder="Correo electrónico" required>
+                <input type="password" name="password" placeholder="Contraseña" required>
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,159 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Jost', sans-serif;
+    background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+}
+
+/* Título fijo en la parte superior */
+.page-title {
+    color: #fff;
+    font-size: 2.5em;
+    font-weight: bold;
+    text-align: center;
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+}
+
+.main {
+    width: 350px;
+    height: 500px;
+    background: #24243e;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 5px 20px 50px #000;
+    margin-top: 80px; /* Espacio para el título superior */
+}
+
+#chk {
+    display: none;
+}
+
+.signup {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto; /* Habilitar scroll vertical dentro del formulario de registro */
+    padding-bottom: 80px; /* Mantenemos este valor para que el botón sea visible */
+}
+
+label {
+    color: #fff;
+    font-size: 2.3em;
+    justify-content: center;
+    display: flex;
+    margin: 60px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .5s ease-in-out;
+}
+
+input {
+    width: 60%;
+    height: 20px;
+    background: #e0dede;
+    justify-content: center;
+    display: flex;
+    margin: 20px auto;
+    padding: 10px;
+    border: none;
+    outline: none;
+    border-radius: 5px;
+}
+
+select {
+    width: 60%;
+    height: 40px; /* Ajustamos la altura total a 40px (20px de height + 10px padding superior + 10px padding inferior) para que coincida con los inputs */
+    background: #e0dede;
+    margin: 20px auto;
+    padding: 10px 10px 10px 10px; /* Aseguramos padding uniforme */
+    border: none;
+    outline: none;
+    border-radius: 5px;
+    display: block; /* Aseguramos que el select sea un bloque */
+    appearance: none; /* Eliminar el estilo por defecto del navegador */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* Flecha personalizada */
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    cursor: pointer; /* Indicamos que es interactivo */
+    position: relative; /* Aseguramos que no haya problemas de superposición */
+    z-index: 1; /* Nos aseguramos de que esté por encima de otros elementos */
+    font-family: 'Jost', sans-serif; /* Usamos la misma fuente que el resto del formulario */
+    color: #333; /* Color del texto para que sea legible */
+}
+
+button {
+    width: 60%;
+    height: 40px;
+    margin: 10px auto;
+    justify-content: center;
+    display: block;
+    color: #fff;
+    background: #573b8a;
+    font-size: 1em;
+    font-weight: bold;
+    margin-top: 20px;
+    outline: none;
+    border: none;
+    border-radius: 5px;
+    transition: .2s ease-in;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #6d44b8;
+}
+
+.login {
+    height: 460px;
+    background: #eee;
+    border-radius: 60% / 10%;
+    transform: translateY(-180px);
+    transition: .8s ease-in-out;
+}
+
+.login label {
+    color: #573b8a;
+    transform: scale(.6);
+}
+
+#chk:checked ~ .login {
+    transform: translateY(-500px);
+}
+
+#chk:checked ~ .login label {
+    transform: scale(1);	
+}
+
+#chk:checked ~ .signup label {
+    transform: scale(.6);
+}
+
+/* Estilo para el enlace de cambio entre formularios */
+.switch-form {
+    color: #fff;
+    font-size: 0.9em;
+    text-align: center;
+    margin: 10px auto;
+}
+
+.switch-form a {
+    color: #6d44b8;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.switch-form a:hover {
+    color: #573b8a;
+    text-decoration: underline;
+}
