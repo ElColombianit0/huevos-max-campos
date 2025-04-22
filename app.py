@@ -474,14 +474,16 @@ def admin_purchases():
         return redirect(url_for('index'))
 
     try:
+        # Verificar si la plantilla existe
+        print("Intentando renderizar purchases.html...")
         purchases = []
         search_email = None
 
         if request.method == 'POST':
             search_email = request.form.get('email')
             if search_email:
-                # Buscar compras por correo
-                purchases = list(purchases_collection.find({"correo": search_email}))
+                # Buscar compras por correo, insensible a mayúsculas
+                purchases = list(purchases_collection.find({"correo": {"$regex": f"^{search_email}$", "$options": "i"}}))
                 print(f"Compras encontradas para {search_email}: {purchases}")
             else:
                 return render_template('purchases.html', error="Por favor ingresa un correo para buscar", purchases=None, search_email=None)
