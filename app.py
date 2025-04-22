@@ -11,6 +11,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from datetime import datetime
 
 # Crear la aplicación Flask
 application = Flask(__name__, template_folder='templates')
@@ -31,6 +32,7 @@ try:
     users_collection = db['users']
     stock_collection = db['stock']
     products_collection = db['products']
+    purchases_collection = db['purchases']  # Nueva colección para las compras
 except Exception as e:
     print(f"Error al conectar a MongoDB: {e}")
     raise Exception("No se pudo conectar a MongoDB")
@@ -99,6 +101,7 @@ def login():
         session['correo'] = correo
         session['tipo_persona'] = user['tipo_persona']
         session['numero_documento'] = user['numero_documento']
+        print(f"Usuario {correo} ha iniciado sesión correctamente.")
         return redirect(url_for('index'))
     return render_template('login.html', error=None, signup_error=None)
 
@@ -418,6 +421,34 @@ def buy():
                 {"type": "huevos"},
                 {"$set": {f"{tipo}.{tamano}": stock[tipo][tamano]}}
             )
+
+            # Calcular el precio total para guardar en la colección
+            precio_cubeta = PRECIOS[tipo][tamano]
+            if unidad == 'cubeta':
+                precio_unitario = precio_cubeta
+            else:
+                precio_unitario = (precio_cubeta / 30) * 12
+            subtotal = precio_unitario * cantidad
+            iva = subtotal * 0.05
+            total = subtotal + iva
+
+            # Obtener el nombre del cliente
+            user = users_collection.find_one({"correo": session.get('correo')})
+            if not user:
+                return render_template('buy.html', error="Usuario no encontrado", tipo_persona=tipo_persona)
+            nombre_cliente = user['nombre_completo']
+
+            # Guardar los detalles de la compra en la colección 'purchases'
+            purchase = {
+                "correo": session.get('correo'),
+                "nombre_cliente": nombre_cliente,
+                "fecha": datetime.utcnow(),
+                "detalle": f"Huevo {tipo} {tamano} ({unidad}) x {cantidad}",
+                "total": total
+            }
+            result = purchases_collection.insert_one(purchase)
+            print(f"Compra guardada en la base de datos con ID: {result.inserted_id}")
+
             pdf_buffer = generate_invoice(tipo, tamano, cantidad, unidad)
             return send_file(
                 pdf_buffer,
@@ -429,7 +460,30 @@ def buy():
             return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona)
         except ValueError:
             return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona)
+        except Exception as e:
+            print(f"Error al procesar la compra: {str(e)}")
+            return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona)
     return render_template('buy.html', tipo_persona=tipo_persona, error=None)
+
+@application.route('/admin/purchases', methods=['GET', 'POST'])
+def admin_purchases():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    if session.get('numero_documento') != '1234567890':
+        return redirect(url_for('index'))
+
+    purchases = []
+    search_email = None
+
+    if request.method == 'POST':
+        search_email = request.form.get('email')
+        if search_email:
+            # Buscar compras por correo
+            purchases = list(purchases_collection.find({"correo": search_email}))
+        else:
+            return render_template('purchases.html', error="Por favor ingresa un correo para buscar", purchases=None, search_email=None)
+
+    return render_template('purchases.html', purchases=purchases, search_email=search_email, error=None)
 
 def generate_invoice(tipo, tamano, cantidad, unidad):
     precio_cubeta = PRECIOS[tipo][tamano]
