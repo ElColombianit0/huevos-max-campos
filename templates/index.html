@@ -73,6 +73,7 @@
             <a href="{{ url_for('register_stock') }}" class="button">Registrar Stock</a>
             <a href="{{ url_for('register_product') }}" class="button">Registrar Producto</a>
             <a href="{{ url_for('list_products') }}" class="button">Ver Productos</a>
+            <a href="{{ url_for('admin_purchases') }}" class="button">Buscar Compras de Clientes</a>
         {% else %}
             <a href="{{ url_for('buy') }}" class="button">Comprar Huevos</a>
         {% endif %}
