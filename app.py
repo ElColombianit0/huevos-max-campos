@@ -84,8 +84,9 @@ PRECIOS = {
 # Manejador de errores global
 @application.errorhandler(Exception)
 def handle_exception(e):
-    print(f"Error inesperado: {str(e)}")
-    return render_template('error.html', error=f"Error inesperado: {str(e)}"), 500
+    error_message = f"Error inesperado: {str(e)}"
+    print(error_message)  # Para depuración
+    return render_template('error.html', error=error_message), 500
 
 @application.route('/login', methods=['GET', 'POST'])
 def login():
@@ -472,18 +473,23 @@ def admin_purchases():
     if session.get('numero_documento') != '1234567890':
         return redirect(url_for('index'))
 
-    purchases = []
-    search_email = None
+    try:
+        purchases = []
+        search_email = None
 
-    if request.method == 'POST':
-        search_email = request.form.get('email')
-        if search_email:
-            # Buscar compras por correo
-            purchases = list(purchases_collection.find({"correo": search_email}))
-        else:
-            return render_template('purchases.html', error="Por favor ingresa un correo para buscar", purchases=None, search_email=None)
+        if request.method == 'POST':
+            search_email = request.form.get('email')
+            if search_email:
+                # Buscar compras por correo
+                purchases = list(purchases_collection.find({"correo": search_email}))
+                print(f"Compras encontradas para {search_email}: {purchases}")
+            else:
+                return render_template('purchases.html', error="Por favor ingresa un correo para buscar", purchases=None, search_email=None)
 
-    return render_template('purchases.html', purchases=purchases, search_email=search_email, error=None)
+        return render_template('purchases.html', purchases=purchases, search_email=search_email, error=None)
+    except Exception as e:
+        print(f"Error en admin_purchases: {str(e)}")
+        raise Exception(f"No se pudo cargar la plantilla purchases.html: {str(e)}")
 
 def generate_invoice(tipo, tamano, cantidad, unidad):
     precio_cubeta = PRECIOS[tipo][tamano]

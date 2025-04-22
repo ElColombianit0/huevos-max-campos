@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar Compras - Huevos Max Campos</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Buscar Compras por Cliente</h1>
+    <a href="/">Volver al inicio</a>
+
+    <!-- Formulario de búsqueda -->
+    <form method="POST" action="{{ url_for('admin_purchases') }}">
+        <label for="email">Correo del Cliente:</label>
+        <input type="email" id="email" name="email" value="{{ search_email or '' }}" required>
+        <button type="submit">Buscar</button>
+    </form>
+
+    <!-- Mostrar errores si los hay -->
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <!-- Mostrar lista de compras -->
+    {% if purchases is not none %}
+        {% if purchases %}
+            <h2>Compras de {{ search_email }}</h2>
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Nombre del Cliente</th>
+                        <th>Fecha de Compra</th>
+                        <th>Detalles de la Compra</th>
+                        <th>Precio Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for purchase in purchases %}
+                        <tr>
+                            <td>{{ purchase.nombre_cliente }}</td>
+                            <td>{{ purchase.fecha.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ purchase.detalle }}</td>
+                            <td>${{ "%.2f" % purchase.total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No se encontraron compras para el correo {{ search_email }}.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
