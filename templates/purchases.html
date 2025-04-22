@@ -4,51 +4,200 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscar Compras - Huevos Max Campos</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Jost', sans-serif;
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        a.button {
+            width: 200px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            background: #573b8a;
+            font-size: 1em;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: .2s ease-in;
+        }
+
+        a.button:hover {
+            background: #6d44b8;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        input[type="email"] {
+            width: 250px;
+            padding: 8px;
+            font-family: 'Jost', sans-serif;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background: #fff;
+            color: #333;
+        }
+
+        button {
+            width: 200px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            background: #573b8a;
+            font-family: 'Jost', sans-serif;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: .2s ease-in;
+        }
+
+        button:hover {
+            background: #6d44b8;
+        }
+
+        p.error {
+            color: #ff5555;
+            font-size: 1em;
+            margin: 10px 0;
+        }
+
+        p.info {
+            font-size: 1em;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th {
+            background: #573b8a;
+            font-weight: bold;
+        }
+
+        td {
+            background: transparent;
+        }
+
+        a.back {
+            margin-top: 20px;
+            color: #6d44b8;
+            font-size: 0.9em;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a.back:hover {
+            color: #573b8a;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <h1>Buscar Compras por Cliente</h1>
-    <a href="/">Volver al inicio</a>
+    <div class="container">
+        <a href="/" class="back">Volver al inicio</a>
 
-    <!-- Formulario de búsqueda -->
-    <form method="POST" action="{{ url_for('admin_purchases') }}">
-        <label for="email">Correo del Cliente:</label>
-        <input type="email" id="email" name="email" value="{{ search_email or '' }}" required>
-        <button type="submit">Buscar</button>
-    </form>
+        <!-- Formulario de búsqueda -->
+        <form method="POST" action="{{ url_for('admin_purchases') }}">
+            <label for="email">Correo del Cliente:</label>
+            <input type="email" id="email" name="email" value="{{ search_email or '' }}" required>
+            <button type="submit">Buscar</button>
+        </form>
 
-    <!-- Mostrar errores si los hay -->
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-
-    <!-- Mostrar lista de compras -->
-    {% if purchases is not none %}
-        {% if purchases %}
-            <h2>Compras de {{ search_email }}</h2>
-            <table border="1">
-                <thead>
-                    <tr>
-                        <th>Nombre del Cliente</th>
-                        <th>Fecha de Compra</th>
-                        <th>Detalles de la Compra</th>
-                        <th>Precio Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for purchase in purchases %}
-                        <tr>
-                            <td>{{ purchase.nombre_cliente }}</td>
-                            <td>{{ purchase.fecha.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                            <td>{{ purchase.detalle }}</td>
-                            <td>${{ "%.2f" % purchase.total }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No se encontraron compras para el correo {{ search_email }}.</p>
+        <!-- Mostrar errores si los hay -->
+        {% if error %}
+            <p class="error">{{ error }}</p>
         {% endif %}
-    {% endif %}
+
+        <!-- Mostrar lista de compras -->
+        {% if purchases is not none %}
+            {% if purchases %}
+                <h2>Compras de {{ search_email }}</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre del Cliente</th>
+                            <th>Fecha de Compra</th>
+                            <th>Detalles de la Compra</th>
+                            <th>Precio Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for purchase in purchases %}
+                            <tr>
+                                <td>{{ purchase.nombre_cliente }}</td>
+                                <td>{{ purchase.fecha.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>{{ purchase.detalle }}</td>
+                                <td>${{ "%.2f" % purchase.total }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="info">No se encontraron compras para el correo {{ search_email }}.</p>
+            {% endif %}
+        {% endif %}
+    </div>
 </body>
 </html>
