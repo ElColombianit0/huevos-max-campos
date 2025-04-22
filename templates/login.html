@@ -11,18 +11,7 @@
     <h1 class="page-title">Huevos Max Campos</h1>
     <div class="main">
         <input type="checkbox" id="chk" aria-hidden="true">
-        <!-- LOGIN -->
-        <div class="login">
-            <form method="POST" action="{{ url_for('login') }}">
-                <label for="chk" aria-hidden="true">Iniciar Sesión</label>
-                {% if error %}
-                    <p style="color: red; text-align: center;">{{ error }}</p>
-                {% endif %}
-                <input type="email" name="correo" placeholder="Correo electrónico" required>
-                <input type="password" name="password" placeholder="Contraseña" required>
-                <button type="submit">Iniciar Sesión</button>
-            </form>
-        </div>
+
         <!-- REGISTRO -->
         <div class="signup">
             <form method="POST" action="{{ url_for('register_user') }}">
@@ -45,7 +34,18 @@
             </form>
         </div>
 
-        
+        <!-- LOGIN -->
+        <div class="login">
+            <form method="POST" action="{{ url_for('login') }}">
+                <label for="chk" aria-hidden="true">Iniciar Sesión</label>
+                {% if error %}
+                    <p style="color: red; text-align: center;">{{ error }}</p>
+                {% endif %}
+                <input type="email" name="correo" placeholder="Correo electrónico" required>
+                <input type="password" name="password" placeholder="Contraseña" required>
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>
