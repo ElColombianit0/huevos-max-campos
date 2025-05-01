@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Error - Huevos Max Campos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>Error</h1>
-    <p>{{ error }}</p>
-    <a href="/">Volver al inicio</a>
+    <div class="container">
+        <h1>Error</h1>
+        <p class="error">{{ error }}</p>
+        <a href="{{ url_for('index') }}">Volver al Inicio</a>
+    </div>
 </body>
 </html>

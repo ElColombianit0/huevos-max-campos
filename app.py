@@ -13,19 +13,21 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from authlib.integrations.flask_client import OAuth
 import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Crear la aplicación Flask
-application = Flask(__name__, template_folder='templates')
+application = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Configuración de sesiones
-application.config['SECRET_KEY'] = 'supersecretkey123'
+application.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey123')
 application.config['PERMANENT_SESSION_LIFETIME'] = 1800
 application.config['SESSION_PERMANENT'] = False
 
 # Configuración de MongoDB
-username = urllib.parse.quote_plus("sergio")
-password = urllib.parse.quote_plus("47iV@E9Jh8Fh9Fs")
-mongo_uri = f"mongodb+srv://{username}:{password}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority"
+mongo_uri = os.getenv('MONGODB_URI')
 try:
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
     client.server_info()
@@ -41,8 +43,8 @@ except Exception as e:
 oauth = OAuth(application)
 google = oauth.register(
     name='google',
-    client_id='TU_CLIENT_ID',  # Reemplaza con tu client_id de Google
-    client_secret='TU_CLIENT_SECRET',  # Reemplaza con tu client_secret
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
@@ -438,7 +440,7 @@ def inventory():
     # Datos estáticos para la imagen y descripción (puedes hacerlos dinámicos)
     inventory_data = {
         "rojo": {
-            "image": "/static/images/huevo_rojo.jpg",  # Asegúrate de tener esta imagen en la carpeta static
+            "image": "/static/images/huevo_rojo.jpg",
             "description": "Huevos rojos frescos, disponibles en tamaños A, AA, B y EXTRA."
         },
         "blanco": {
@@ -570,3 +572,8 @@ def generate_invoice(tipo, tamano, cantidad, unidad):
     c.save()
     buffer.seek(0)
     return buffer
+
+# Para Vercel
+app = application
+if __name__ == '__main__':
+    application.run(debug=True)

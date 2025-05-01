@@ -2,24 +2,27 @@
 <html>
 <head>
     <title>Iniciar Sesión - Huevos Max Campos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>Iniciar Sesión</h1>
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    {% if signup_error %}
-        <p style="color: red;">{{ signup_error }}</p>
-    {% endif %}
-    <form method="POST" action="{{ url_for('login') }}">
-        <label>Correo:</label>
-        <input type="email" name="correo" required><br>
-        <label>Contraseña:</label>
-        <input type="password" name="password" required><br>
-        <button type="submit">Iniciar Sesión</button>
-    </form>
-    <p>O</p>
-    <a href="{{ google_login_url }}"><button>Iniciar Sesión con Google</button></a>
-    <p>¿No tienes cuenta? <a href="{{ url_for('register') }}">Regístrate</a></p>
+    <div class="container">
+        <h1>Iniciar Sesión</h1>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        {% if signup_error %}
+            <p class="error">{{ signup_error }}</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('login') }}">
+            <label>Correo:</label>
+            <input type="email" name="correo" required>
+            <label>Contraseña:</label>
+            <input type="password" name="password" required>
+            <button type="submit">Iniciar Sesión</button>
+        </form>
+        <p>O</p>
+        <a href="{{ google_login_url }}"><button>Iniciar Sesión con Google</button></a>
+        <p>¿No tienes cuenta? <a href="{{ url_for('register') }}">Regístrate</a></p>
+    </div>
 </body>
 </html>
