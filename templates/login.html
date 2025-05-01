@@ -10,9 +10,6 @@
         {% if error %}
             <p class="error">{{ error }}</p>
         {% endif %}
-        {% if signup_error %}
-            <p class="error">{{ signup_error }}</p>
-        {% endif %}
         <form method="POST" action="{{ url_for('login') }}">
             <label>Correo:</label>
             <input type="email" name="correo" required>
@@ -22,7 +19,28 @@
         </form>
         <p>O</p>
         <a href="{{ google_login_url }}"><button>Iniciar Sesión con Google</button></a>
-        <p>¿No tienes cuenta? <a href="{{ url_for('register') }}">Regístrate</a></p>
+        <h2>Registrarse</h2>
+        {% if signup_error %}
+            <p class="error">{{ signup_error }}</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('register') }}">
+            <label>Número de Documento:</label>
+            <input type="text" name="numero_documento" required>
+            <label>Nombre Completo:</label>
+            <input type="text" name="nombre_completo" required>
+            <label>Número de Contacto:</label>
+            <input type="text" name="numero_contacto" required>
+            <label>Correo:</label>
+            <input type="email" name="correo" required>
+            <label>Tipo de Persona:</label>
+            <select name="tipo_persona" required>
+                <option value="natural">Natural</option>
+                <option value="juridica">Jurídica</option>
+            </select>
+            <label>Contraseña:</label>
+            <input type="password" name="password" required>
+            <button type="submit">Registrarse</button>
+        </form>
     </div>
 </body>
 </html>
