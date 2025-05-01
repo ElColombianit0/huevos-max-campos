@@ -11,12 +11,13 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from datetime import datetime
+from authlib.integrations.flask_client import OAuth
+import os
 
 # Crear la aplicación Flask
 application = Flask(__name__, template_folder='templates')
 
-# Configuración de sesiones (usar cookies)
+# Configuración de sesiones
 application.config['SECRET_KEY'] = 'supersecretkey123'
 application.config['PERMANENT_SESSION_LIFETIME'] = 1800
 application.config['SESSION_PERMANENT'] = False
@@ -32,10 +33,19 @@ try:
     users_collection = db['users']
     stock_collection = db['stock']
     products_collection = db['products']
-    purchases_collection = db['purchases']  # Nueva colección para las compras
 except Exception as e:
     print(f"Error al conectar a MongoDB: {e}")
     raise Exception("No se pudo conectar a MongoDB")
+
+# Configuración de OAuth para Google
+oauth = OAuth(application)
+google = oauth.register(
+    name='google',
+    client_id='TU_CLIENT_ID',  # Reemplaza con tu client_id de Google
+    client_secret='TU_CLIENT_SECRET',  # Reemplaza con tu client_secret
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 # Eliminar índice obsoleto 'username_1' si existe
 try:
@@ -84,9 +94,43 @@ PRECIOS = {
 # Manejador de errores global
 @application.errorhandler(Exception)
 def handle_exception(e):
-    error_message = f"Error inesperado: {str(e)}"
-    print(error_message)  # Para depuración
-    return render_template('error.html', error=error_message), 500
+    print(f"Error inesperado: {str(e)}")
+    return render_template('error.html', error=f"Error inesperado: {str(e)}"), 500
+
+# Ruta para iniciar el flujo de autenticación con Google
+@application.route('/google')
+def google_login():
+    redirect_uri = url_for('google_auth', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+# Ruta de callback para Google
+@application.route('/google/auth')
+def google_auth():
+    token = google.authorize_access_token()
+    user_info = google.parse_id_token(token)
+    correo = user_info['email']
+    nombre = user_info['name']
+
+    # Buscar si el usuario ya existe
+    user = users_collection.find_one({"correo": correo})
+    if not user:
+        # Crear una cuenta automáticamente como persona natural
+        users_collection.insert_one({
+            "numero_documento": f"google_{user_info['sub']}",
+            "tipo_documento": "google",
+            "nombre_completo": nombre,
+            "numero_contacto": "0000000000",
+            "correo": correo,
+            "tipo_persona": "natural",
+            "password": generate_password_hash(correo)  # Contraseña dummy
+        })
+
+    # Iniciar sesión
+    session['logged_in'] = True
+    session['correo'] = correo
+    session['tipo_persona'] = user['tipo_persona'] if user else "natural"
+    session['numero_documento'] = user['numero_documento'] if user else f"google_{user_info['sub']}"
+    return redirect(url_for('index'))
 
 @application.route('/login', methods=['GET', 'POST'])
 def login():
@@ -102,9 +146,8 @@ def login():
         session['correo'] = correo
         session['tipo_persona'] = user['tipo_persona']
         session['numero_documento'] = user['numero_documento']
-        print(f"Usuario {correo} ha iniciado sesión correctamente.")
         return redirect(url_for('index'))
-    return render_template('login.html', error=None, signup_error=None)
+    return render_template('login.html', error=None, signup_error=None, google_login_url=url_for('google'))
 
 @application.route('/register', methods=['POST'])
 def register_user():
@@ -252,7 +295,9 @@ def list_products():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     products = list(products_collection.find())
-    return render_template('list_products.html', products=products)
+    stock = stock_collection.find_one({"type": "huevos"})
+    is_admin = session.get('numero_documento') == '1234567890'
+    return render_template('list_products.html', products=products, stock=stock, is_admin=is_admin)
 
 @application.route('/edit_product/<product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
@@ -343,7 +388,6 @@ def register_stock():
         return redirect(url_for('index'))
     if request.method == 'POST':
         try:
-            print("Datos recibidos:", request.form)
             tipo = request.form.get('tipo')
             tamano = request.form.get('tamano')
             cantidad_str = request.form.get('cantidad')
@@ -360,7 +404,6 @@ def register_stock():
             if cantidad < 0:
                 return render_template('register_stock.html', error="Cantidad no puede ser negativa", success=None)
             stock_doc = stock_collection.find_one({"type": "huevos"})
-            print("Documento de stock encontrado:", stock_doc)
             if not stock_doc:
                 initial_stock = {
                     "type": "huevos",
@@ -369,7 +412,6 @@ def register_stock():
                 }
                 stock_collection.insert_one(initial_stock)
                 stock_doc = stock_collection.find_one({"type": "huevos"})
-                print("Documento de stock creado:", stock_doc)
             if tipo not in stock_doc or tamano not in stock_doc[tipo]:
                 return render_template('register_stock.html', error="Estructura de stock inválida", success=None)
             current_stock = stock_doc[tipo][tamano]
@@ -378,17 +420,33 @@ def register_stock():
                 {"type": "huevos"},
                 {"$set": {f"{tipo}.{tamano}": new_stock}}
             )
-            print("Resultado de la actualización:", result.modified_count)
             if result.modified_count == 0:
                 return render_template('register_stock.html', error="No se pudo actualizar el stock, intenta de nuevo", success=None)
             updated_stock_doc = stock_collection.find_one({"type": "huevos"})
             updated_stock = updated_stock_doc[tipo][tamano]
-            print("Stock actualizado:", updated_stock)
             return render_template('register_stock.html', success=f"Se agregaron {cantidad} unidades al stock de huevos {tipo} tamaño {tamano}. Stock actual: {updated_stock}", error=None)
         except Exception as e:
             print("Error:", str(e))
             return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None)
     return render_template('register_stock.html', error=None, success=None)
+
+@application.route('/inventory')
+def inventory():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    stock = stock_collection.find_one({"type": "huevos"})
+    # Datos estáticos para la imagen y descripción (puedes hacerlos dinámicos)
+    inventory_data = {
+        "rojo": {
+            "image": "/static/images/huevo_rojo.jpg",  # Asegúrate de tener esta imagen en la carpeta static
+            "description": "Huevos rojos frescos, disponibles en tamaños A, AA, B y EXTRA."
+        },
+        "blanco": {
+            "image": "/static/images/huevo_blanco.jpg",
+            "description": "Huevos blancos de alta calidad, disponibles en tamaños A, AA, B y EXTRA."
+        }
+    }
+    return render_template('inventory.html', stock=stock, inventory_data=inventory_data)
 
 @application.route('/buy', methods=['GET', 'POST'])
 def buy():
@@ -422,34 +480,6 @@ def buy():
                 {"type": "huevos"},
                 {"$set": {f"{tipo}.{tamano}": stock[tipo][tamano]}}
             )
-
-            # Calcular el precio total para guardar en la colección
-            precio_cubeta = PRECIOS[tipo][tamano]
-            if unidad == 'cubeta':
-                precio_unitario = precio_cubeta
-            else:
-                precio_unitario = (precio_cubeta / 30) * 12
-            subtotal = precio_unitario * cantidad
-            iva = subtotal * 0.05
-            total = subtotal + iva
-
-            # Obtener el nombre del cliente
-            user = users_collection.find_one({"correo": session.get('correo')})
-            if not user:
-                return render_template('buy.html', error="Usuario no encontrado", tipo_persona=tipo_persona)
-            nombre_cliente = user['nombre_completo']
-
-            # Guardar los detalles de la compra en la colección 'purchases'
-            purchase = {
-                "correo": session.get('correo'),
-                "nombre_cliente": nombre_cliente,
-                "fecha": datetime.utcnow(),
-                "detalle": f"Huevo {tipo} {tamano} ({unidad}) x {cantidad}",
-                "total": total
-            }
-            result = purchases_collection.insert_one(purchase)
-            print(f"Compra guardada en la base de datos con ID: {result.inserted_id}")
-
             pdf_buffer = generate_invoice(tipo, tamano, cantidad, unidad)
             return send_file(
                 pdf_buffer,
@@ -461,37 +491,7 @@ def buy():
             return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona)
         except ValueError:
             return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona)
-        except Exception as e:
-            print(f"Error al procesar la compra: {str(e)}")
-            return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona)
     return render_template('buy.html', tipo_persona=tipo_persona, error=None)
-
-@application.route('/admin/purchases', methods=['GET', 'POST'])
-def admin_purchases():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    if session.get('numero_documento') != '1234567890':
-        return redirect(url_for('index'))
-
-    try:
-        # Verificar si la plantilla existe
-        print("Intentando renderizar purchases.html...")
-        purchases = []
-        search_email = None
-
-        if request.method == 'POST':
-            search_email = request.form.get('email')
-            if search_email:
-                # Buscar compras por correo, insensible a mayúsculas
-                purchases = list(purchases_collection.find({"correo": {"$regex": f"^{search_email}$", "$options": "i"}}))
-                print(f"Compras encontradas para {search_email}: {purchases}")
-            else:
-                return render_template('purchases.html', error="Por favor ingresa un correo para buscar", purchases=None, search_email=None)
-
-        return render_template('purchases.html', purchases=purchases, search_email=search_email, error=None)
-    except Exception as e:
-        print(f"Error en admin_purchases: {str(e)}")
-        raise Exception(f"No se pudo cargar la plantilla purchases.html: {str(e)}")
 
 def generate_invoice(tipo, tamano, cantidad, unidad):
     precio_cubeta = PRECIOS[tipo][tamano]

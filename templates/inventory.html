@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventario - Huevos Max Campos</title>
+</head>
+<body>
+    <h1>Inventario de Huevos</h1>
+    <h2>Huevos Rojos</h2>
+    <img src="{{ inventory_data.rojo.image }}" alt="Huevos Rojos" width="200">
+    <p>{{ inventory_data.rojo.description }}</p>
+    <ul>
+        <li>Tamaño A: {{ stock.rojo.A }} unidades</li>
+        <li>Tamaño AA: {{ stock.rojo.AA }} unidades</li>
+        <li>Tamaño B: {{ stock.rojo.B }} unidades</li>
+        <li>Tamaño EXTRA: {{ stock.rojo.EXTRA }} unidades</li>
+    </ul>
+    <h2>Huevos Blancos</h2>
+    <img src="{{ inventory_data.blanco.image }}" alt="Huevos Blancos" width="200">
+    <p>{{ inventory_data.blanco.description }}</p>
+    <ul>
+        <li>Tamaño A: {{ stock.blanco.A }} unidades</li>
+        <li>Tamaño AA: {{ stock.blanco.AA }} unidades</li>
+        <li>Tamaño B: {{ stock.blanco.B }} unidades</li>
+        <li>Tamaño EXTRA: {{ stock.blanco.EXTRA }} unidades</li>
+    </ul>
+    <a href="{{ url_for('index') }}">Volver al Inicio</a>
+</body>
+</html>
