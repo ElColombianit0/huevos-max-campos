@@ -43,8 +43,8 @@ except Exception as e:
 oauth = OAuth(application)
 google = oauth.register(
     name='google',
-    client_id=os.getenv('GOOGLE_CLIENT_ID'),
-    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    client_id=os.getenv('1068505250151-6k26is5lruk6dqc5msei0fpk7mr31q2j.apps.googleusercontent.com'),
+    client_secret=os.getenv('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'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
