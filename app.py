@@ -9,14 +9,17 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from authlib.integrations.flask_client import OAuth
 import os
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
+# Cargar variables de entorno y depurar
+print("Cargando .env...")
 load_dotenv()
+print("MONGODB_URI:", os.getenv('MONGODB_URI'))  # Depuración
+print("GOOGLE_CLIENT_ID:", os.getenv('GOOGLE_CLIENT_ID'))  # Depuración
+print("GOOGLE_CLIENT_SECRET:", os.getenv('GOOGLE_CLIENT_SECRET'))  # Depuración
+print("Ruta del directorio:", os.getcwd())  # Verifica el directorio actual
 
 # Crear la aplicación Flask
 application = Flask(__name__, template_folder='templates', static_folder='static')
@@ -28,9 +31,11 @@ application.config['SESSION_PERMANENT'] = False
 
 # Configuración de MongoDB
 mongo_uri = os.getenv('MONGODB_URI')
+if not mongo_uri:
+    raise Exception("La variable de entorno MONGODB_URI no está definida")
 try:
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
-    client.server_info()
+    client.server_info()  # Verifica la conexión
     db = client['huevos_max_campos']
     users_collection = db['users']
     stock_collection = db['stock']
@@ -43,8 +48,8 @@ except Exception as e:
 oauth = OAuth(application)
 google = oauth.register(
     name='google',
-    client_id=os.getenv('1068505250151-6k26is5lruk6dqc5msei0fpk7mr31q2j.apps.googleusercontent.com'),
-    client_secret=os.getenv('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'),
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
@@ -149,7 +154,7 @@ def login():
         session['tipo_persona'] = user['tipo_persona']
         session['numero_documento'] = user['numero_documento']
         return redirect(url_for('index'))
-    return render_template('login.html', error=None, signup_error=None, google_login_url=url_for('google'))
+    return render_template('login.html', error=None, signup_error=None)
 
 @application.route('/register', methods=['POST'])
 def register_user():
@@ -437,7 +442,6 @@ def inventory():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     stock = stock_collection.find_one({"type": "huevos"})
-    # Datos estáticos para la imagen y descripción (puedes hacerlos dinámicos)
     inventory_data = {
         "rojo": {
             "image": "/static/images/huevo_rojo.jpg",

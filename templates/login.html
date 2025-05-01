@@ -18,12 +18,12 @@
             <button type="submit">Iniciar Sesión</button>
         </form>
         <p>O</p>
-        <a href="{{ google_login_url }}"><button>Iniciar Sesión con Google</button></a>
+        <a href="{{ url_for('google_login') }}"><button>Iniciar Sesión con Google</button></a>
         <h2>Registrarse</h2>
         {% if signup_error %}
             <p class="error">{{ signup_error }}</p>
         {% endif %}
-        <form method="POST" action="{{ url_for('register') }}">
+        <form method="POST" action="{{ url_for('register_user') }}">
             <label>Número de Documento:</label>
             <input type="text" name="numero_documento" required>
             <label>Nombre Completo:</label>
