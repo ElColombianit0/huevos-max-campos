@@ -1,18 +1,21 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "wsgi.py",
-      "use": "@vercel/python"
-    }
+      {
+          "src": "app.py",
+          "use": "@ardnt/vercel-python-wsgi",
+          "config": { "maxLambdaSize": "15mb" }
+      }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "wsgi.py"
-    }
+      {
+          "src": "/(.*)",
+          "dest": "/"
+      }
   ],
-  "env": {
-    "FLASK_ENV": "production"
-  }
+  "env": [
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "MONGO_URI"
+  ]
 }
