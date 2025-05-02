@@ -3,6 +3,7 @@ from flask_session import Session
 import json
 import os
 from pymongo import MongoClient
+from flask_pymongo import PyMongo
 from werkzeug.security import generate_password_hash, check_password_hash
 import re
 import urllib.parse
@@ -24,7 +25,10 @@ app = Flask(__name__, template_folder='templates')
 
 # Configuración de sesiones
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_TYPE'] = 'mongodb'
+app.config['SESSION_MONGODB'] = MongoClient(os.getenv('MONGO_URI'))
+app.config['SESSION_MONGODB_DB'] = 'huevos_max_campos'
+app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
 app.config['SESSION_PERMANENT'] = False
 Session(app)
 
