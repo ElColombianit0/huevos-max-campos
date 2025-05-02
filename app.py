@@ -15,11 +15,15 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from authlib.integrations.flask_client import OAuth
 from urllib.parse import urlencode
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 app = Flask(__name__, template_folder='templates')
 
 # Configuración de sesiones
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
 Session(app)
@@ -28,8 +32,8 @@ Session(app)
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
-    client_id=os.getenv('GOOGLE_CLIENT_ID', 'TU_CLIENT_ID_AQUI'),
-    client_secret=os.getenv('GOOGLE_CLIENT_SECRET', 'TU_CLIENT_SECRET_AQUI'),
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
     access_token_url='https://accounts.google.com/o/oauth2/token',
     authorize_url='https://accounts.google.com/o/oauth2/auth',
     client_kwargs={'scope': 'openid email profile'},
@@ -39,9 +43,11 @@ google = oauth.register(
 # Configuración de MongoDB
 mongo_uri = os.getenv('MONGO_URI')
 if not mongo_uri:
+    # Valor por defecto para ejecución local
     username = urllib.parse.quote_plus("sergio")
     password = urllib.parse.quote_plus("47iV@E9Jh8Fh9Fs")
     mongo_uri = f"mongodb+srv://{username}:{password}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority"
+    print("Usando URI de MongoDB por defecto para desarrollo local.")
 
 client = MongoClient(mongo_uri)
 db = client['huevos_max_campos']
@@ -102,21 +108,18 @@ def login():
 def google_callback():
     try:
         token = google.authorize_access_token()
-        user_info = google.parse_id_token(token, nonce=session.get('nonce'))  # Usa el nonce de la sesión
+        user_info = google.parse_id_token(token, nonce=session.get('nonce'))
         email = user_info['email']
 
-        # Verificar si el usuario existe en la base de datos
         user = users_collection.find_one({"correo": email})
         if not user:
-            # Crear un nuevo usuario con datos mínimos
             users_collection.insert_one({
                 "correo": email,
-                "tipo_persona": "natural",  # Valor por defecto
-                "numero_documento": "0000000000"  # Valor por defecto, puede pedirse edición posterior
+                "tipo_persona": "natural",
+                "numero_documento": "0000000000"
             })
             user = users_collection.find_one({"correo": email})
 
-        # Iniciar sesión
         session['logged_in'] = True
         session['correo'] = email
         session['tipo_persona'] = user['tipo_persona']
@@ -154,7 +157,6 @@ def register_user():
     tipo_persona = request.form.get('tipo_persona')
     password = request.form.get('password')
 
-    # Validaciones
     if not re.match(r'^\d+$', numero_documento):
         return render_template('login.html', signup_error="Número de documento debe contener solo números", error=None)
     if users_collection.find_one({"numero_documento": numero_documento}):
@@ -261,6 +263,7 @@ def delete_profile():
     session.pop('correo', None)
     session.pop('tipo_persona', None)
     session.pop('numero_documento', None)
+    session.pop('nonce', None)
     return redirect(url_for('login'))
 
 @app.route('/register_product', methods=['GET', 'POST'])
@@ -411,7 +414,7 @@ def logout():
     session.pop('correo', None)
     session.pop('tipo_persona', None)
     session.pop('numero_documento', None)
-    session.pop('nonce', None)  # Limpiar el nonce al cerrar sesión
+    session.pop('nonce', None)
     return redirect(url_for('login'))
 
 @app.route('/')
@@ -632,7 +635,6 @@ def generate_invoice(tipo, tamano, cantidad, unidad):
     buffer.seek(0)
     return buffer
 
-# Generar un nonce único para cada solicitud de autenticación
 @app.before_request
 def generate_nonce():
     if 'nonce' not in session:
