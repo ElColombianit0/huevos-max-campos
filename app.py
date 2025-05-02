@@ -24,9 +24,9 @@ load_dotenv()
 app = Flask(__name__, template_folder='templates')
 
 # Configuración de sesiones
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')  # Valor por defecto por si falla
 app.config['SESSION_TYPE'] = 'mongodb'
-app.config['SESSION_MONGODB'] = MongoClient(os.getenv('MONGODB_URI'))
+app.config['SESSION_MONGODB'] = MongoClient(os.getenv('MONGO_URI', 'mongodb+srv://sergio:47iV@E9Jh8Fh9Fs@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority'))
 app.config['SESSION_MONGODB_DB'] = 'huevos_max_campos'
 app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
 app.config['SESSION_PERMANENT'] = False
@@ -45,14 +45,7 @@ google = oauth.register(
 )
 
 # Configuración de MongoDB
-mongo_uri = os.getenv('MONGODB_URI')
-if not mongo_uri:
-    # Valor por defecto para ejecución local
-    username = urllib.parse.quote_plus("sergio")
-    password = urllib.parse.quote_plus("47iV@E9Jh8Fh9Fs")
-    mongo_uri = f"mongodb+srv://{username}:{password}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority"
-    print("Usando URI de MongoDB por defecto para desarrollo local.")
-
+mongo_uri = os.getenv('MONGO_URI', 'mongodb+srv://sergio:47iV@E9Jh8Fh9Fs@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority')
 client = MongoClient(mongo_uri)
 db = client['huevos_max_campos']
 users_collection = db['users']
@@ -638,10 +631,6 @@ def generate_invoice(tipo, tamano, cantidad, unidad):
     c.save()
     buffer.seek(0)
     return buffer
-
-@app.route('/favicon.ico')
-def favicon():
-    return "", 204  # Respuesta vacía con código 204 (No Content)
 
 @app.before_request
 def generate_nonce():
