@@ -263,6 +263,7 @@ def list_products():
             "blanco": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0}
         }
         stock_collection.insert_one(stock_doc)
+    logger.info(f"Stock document passed to template: {stock_doc}")
     return render_template('list_products.html', products=products, stock=stock_doc, numero_documento=session.get('numero_documento'))
 
 @application.route('/edit_product/<product_id>', methods=['GET', 'POST'])
@@ -351,7 +352,7 @@ def register_stock():
     if request.method == 'POST':
         try:
             print("Datos recibidos:", request.form)
-            tipo = request.form.get('tipo')
+            tipo = request.form.get('tipo').lower()
             tamano = request.form.get('tamano')
             cantidad_str = request.form.get('cantidad')
             if not tipo or tipo not in ['rojo', 'blanco']:
