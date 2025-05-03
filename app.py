@@ -245,6 +245,7 @@ def register_product():
                 "valor_unitario": valor_unitario,
                 "imagen": imagen_data
             })
+            logger.info(f"Producto registrado: {nombre_producto}, ID: {product_id}")
             return redirect(url_for('list_products'))
         except (KeyError, ValueError):
             return render_template('register_product.html', error="Datos inválidos. Asegúrate de completar todos los campos correctamente.")
@@ -255,6 +256,7 @@ def list_products():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     products = list(products_collection.find())
+    logger.info(f"Productos cargados: {products}")
     stock_doc = stock_collection.find_one({"type": "huevos"})
     if not stock_doc:
         stock_doc = {

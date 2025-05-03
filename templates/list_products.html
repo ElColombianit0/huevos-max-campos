@@ -112,43 +112,41 @@
         <tbody>
             {% for product in products %}
                 {% set parts = product.nombre_producto.split() %}
-                {% if parts|length >= 3 %}
-                    {% set size = parts[1].upper() %}
-                    {% set color = parts[2].lower() %}
-                    {% set stock = stock[color][size] if color in stock and size in stock[color] else 0 %}
-                    <tr>
-                        <td>{{ product.nombre_producto }}</td>
-                        <td>{{ parts[1] }}</td>
-                        <td>{{ color | capitalize }}</td>
-                        <td>{{ product.descripcion }}</td>
-                        <td>${{ product.valor_unitario }}</td>
-                        <td>
-                            {% if product.imagen %}
-                                <img src="{{ url_for('view_image', product_id=product.product_id) }}" alt="{{ product.nombre_producto }}">
-                            {% else %}
-                                Sin imagen
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if stock > 0 %}
-                                {{ stock }} unidades
-                            {% else %}
-                                <span class="out-of-stock">Sin stock</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if numero_documento == '1234567890' %}
-                                <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a> |
-                                <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</a> |
-                            {% endif %}
-                            {% if stock > 0 and numero_documento != '1234567890' %}
-                                <a href="{{ url_for('buy', tipo=color, tamano=size) }}" class="buy-button">Comprar</a>
-                            {% elif numero_documento != '1234567890' %}
-                                No disponible
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endif %}
+                {% set size = parts[1].upper() if parts|length >= 2 else 'N/A' %}
+                {% set color = parts[2].lower() if parts|length >= 3 else 'N/A' %}
+                {% set stock = stock[color][size] if color in stock and size in stock[color] else 0 %}
+                <tr>
+                    <td>{{ product.nombre_producto }}</td>
+                    <td>{{ size if size != 'N/A' else 'N/A' }}</td>
+                    <td>{{ color | capitalize if color != 'N/A' else 'N/A' }}</td>
+                    <td>{{ product.descripcion }}</td>
+                    <td>${{ product.valor_unitario }}</td>
+                    <td>
+                        {% if product.imagen %}
+                            <img src="{{ url_for('view_image', product_id=product.product_id) }}" alt="{{ product.nombre_producto }}">
+                        {% else %}
+                            Sin imagen
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if stock > 0 %}
+                            {{ stock }} unidades
+                        {% else %}
+                            <span class="out-of-stock">Sin stock</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if numero_documento == '1234567890' %}
+                            <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a> |
+                            <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</a> |
+                        {% endif %}
+                        {% if stock > 0 and numero_documento != '1234567890' and color != 'N/A' and size != 'N/A' %}
+                            <a href="{{ url_for('buy', tipo=color, tamano=size) }}" class="buy-button">Comprar</a>
+                        {% elif numero_documento != '1234567890' %}
+                            No disponible
+                        {% endif %}
+                    </td>
+                </tr>
             {% endfor %}
         </tbody>
     </table>
