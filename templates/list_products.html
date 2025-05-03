@@ -111,7 +111,7 @@
                     <td>{{ product.size }}</td>
                     <td>{{ product.descripcion }}</td>
                     <td>${{ product.valor_unitario | float | round(2) }}</td>
-                    <td>{{ product.stock }}</td>
+                    <td>{{ product.stock if product.stock is not none else 'N/A' }}</td>
                     <td class="action-links">
                         {% if numero_documento == '1234567890' %}
                             <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a>
