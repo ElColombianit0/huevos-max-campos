@@ -107,11 +107,12 @@ def load_prices():
 # Función para convertir ObjectId a string y limpiar datos
 def serialize_document(doc):
     if isinstance(doc, dict):
+        # Solo incluir los campos necesarios y excluir 'imagen'
         cleaned_doc = {}
         for key, value in doc.items():
             if key == '_id':
                 cleaned_doc[key] = str(value)
-            elif key != 'imagen':
+            elif key != 'imagen':  # Excluir explícitamente el campo 'imagen'
                 cleaned_doc[key] = serialize_document(value)
         return cleaned_doc
     elif isinstance(doc, list):
@@ -288,52 +289,43 @@ def register_product():
                 "imagen": imagen_data
             })
 
-            # Actualizar el stock dinámicamente solo para huevos
-            if color in ['rojo', 'blanco'] and size in ['A', 'AA', 'B', 'EXTRA']:
-                stock_doc = stock_collection.find_one({"type": "huevos"})
-                if not stock_doc:
-                    stock_doc = {
-                        "type": "huevos",
-                        "rojo": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0},
-                        "blanco": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0}
-                    }
-                    stock_collection.insert_one(stock_doc)
-                
-                if color not in stock_doc:
-                    stock_collection.update_one(
-                        {"type": "huevos"},
-                        {"$set": {color: {size: 0}}},
-                        upsert=True
-                    )
-                elif size not in stock_doc[color]:
-                    stock_collection.update_one(
-                        {"type": "huevos"},
-                        {"$set": {f"{color}.{size}": 0}},
-                        upsert=True
-                    )
+            # Actualizar el stock dinámicamente
+            stock_doc = stock_collection.find_one({"type": "huevos"})
+            if not stock_doc:
+                stock_doc = {"type": "huevos"}
+                stock_collection.insert_one(stock_doc)
+            
+            if color not in stock_doc:
+                stock_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {color: {size: 0}}},
+                    upsert=True
+                )
+            elif size not in stock_doc[color]:
+                stock_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {f"{color}.{size}": 0}},
+                    upsert=True
+                )
 
-                # Actualizar los precios dinámicamente
-                prices_doc = prices_collection.find_one({"type": "huevos"})
-                if not prices_doc:
-                    prices_doc = {
-                        "type": "huevos",
-                        "rojo": {"A": 12000, "AA": 13500, "B": 11000, "EXTRA": 15000},
-                        "blanco": {"A": 10000, "AA": 11500, "B": 9500, "EXTRA": 14000}
-                    }
-                    prices_collection.insert_one(prices_doc)
-                
-                if color not in prices_doc:
-                    prices_collection.update_one(
-                        {"type": "huevos"},
-                        {"$set": {color: {size: valor_unitario}}},
-                        upsert=True
-                    )
-                elif size not in prices_doc[color]:
-                    prices_collection.update_one(
-                        {"type": "huevos"},
-                        {"$set": {f"{color}.{size}": valor_unitario}},
-                        upsert=True
-                    )
+            # Actualizar los precios dinámicamente
+            prices_doc = prices_collection.find_one({"type": "huevos"})
+            if not prices_doc:
+                prices_doc = {"type": "huevos"}
+                prices_collection.insert_one(prices_doc)
+            
+            if color not in prices_doc:
+                prices_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {color: {size: valor_unitario}}},
+                    upsert=True
+                )
+            elif size not in prices_doc[color]:
+                prices_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {f"{color}.{size}": valor_unitario}},
+                    upsert=True
+                )
 
             logger.info(f"Producto registrado: {nombre_producto}, ID: {product_id}, Color: {color}, Tamaño: {size}")
             return redirect(url_for('list_products'))
@@ -347,6 +339,7 @@ def list_products():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     products = list(products_collection.find())
+    logger.info(f"Productos cargados: {products}")
     stock_doc = stock_collection.find_one({"type": "huevos"})
     if not stock_doc:
         stock_doc = {
@@ -356,18 +349,7 @@ def list_products():
         }
         stock_collection.insert_one(stock_doc)
     logger.info(f"Stock document passed to template: {stock_doc}")
-
-    # Añadir stock a cada producto si es huevo
-    for product in products:
-        color = product.get('color', '')
-        size = product.get('size', '')
-        if color in ['rojo', 'blanco'] and size in ['A', 'AA', 'B', 'EXTRA']:
-            product['stock'] = stock_doc.get(color, {}).get(size, 0)
-        else:
-            product['stock'] = 0  # Stock no aplicable para productos no huevos
-
-    logger.info(f"Productos cargados: {products}")
-    return render_template('list_products.html', products=products, numero_documento=session.get('numero_documento'))
+    return render_template('list_products.html', products=products, stock=stock_doc, numero_documento=session.get('numero_documento'))
 
 @application.route('/edit_product/<product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
@@ -419,10 +401,10 @@ def edit_product(product_id):
                 }}
             )
 
-            # Actualizar el stock dinámicamente si el color o tamaño cambió y es huevo
+            # Actualizar el stock dinámicamente si el color o tamaño cambió
             old_color = product.get('color')
             old_size = product.get('size')
-            if (old_color in ['rojo', 'blanco'] and old_size in ['A', 'AA', 'B', 'EXTRA']) and (color in ['rojo', 'blanco'] and size in ['A', 'AA', 'B', 'EXTRA']):
+            if old_color != color or old_size != size:
                 stock_doc = stock_collection.find_one({"type": "huevos"})
                 if stock_doc and old_color in stock_doc and old_size in stock_doc[old_color]:
                     old_stock = stock_doc[old_color][old_size]
@@ -431,7 +413,7 @@ def edit_product(product_id):
                         {"type": "huevos"},
                         {"$set": {f"{color}.{size}": old_stock}}
                     )
-                    # Eliminar el stock antiguo
+                    # Eliminar el stock antiguo si es necesario
                     stock_collection.update_one(
                         {"type": "huevos"},
                         {"$unset": {f"{old_color}.{old_size}": ""}}
@@ -443,7 +425,8 @@ def edit_product(product_id):
                         upsert=True
                     )
 
-                # Actualizar los precios dinámicamente
+            # Actualizar los precios dinámicamente
+            if old_color != color or old_size != size:
                 prices_doc = prices_collection.find_one({"type": "huevos"})
                 if prices_doc and old_color in prices_doc and old_size in prices_doc[old_color]:
                     prices_collection.update_one(
@@ -476,7 +459,7 @@ def delete_product(product_id):
     if product:
         color = product.get('color')
         size = product.get('size')
-        if color in ['rojo', 'blanco'] and size in ['A', 'AA', 'B', 'EXTRA']:
+        if color and size:
             # Eliminar el stock asociado
             stock_collection.update_one(
                 {"type": "huevos"},
@@ -528,12 +511,11 @@ def register_stock():
     required_fields = ['nombre_producto', 'product_id', 'color', 'size', 'descripcion', 'valor_unitario']
     cleaned_products = []
     for product in products:
+        # Crear un nuevo diccionario con solo los campos necesarios
         cleaned_product = {field: product.get(field, '') for field in required_fields}
         cleaned_product['_id'] = product.get('_id', '')
         cleaned_products.append(cleaned_product)
-    # Filtrar solo los tipos de huevo (rojo, blanco)
-    egg_colors = ['rojo', 'blanco']
-    colors = sorted(set(product['color'] for product in cleaned_products if product['color'] in egg_colors))
+    colors = set(product['color'] for product in cleaned_products if 'color' in product and product['color'])
     logger.info(f"Productos procesados para la plantilla: {cleaned_products}")
     if request.method == 'POST':
         try:
