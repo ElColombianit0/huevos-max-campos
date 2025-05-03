@@ -73,6 +73,25 @@
             color: #573b8a;
             text-decoration: underline;
         }
+
+        .buy-button {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #573b8a;
+            color: #fff;
+            border-radius: 5px;
+            transition: .2s ease-in;
+        }
+
+        .buy-button:hover {
+            background: #6d44b8;
+            text-decoration: none;
+        }
+
+        .out-of-stock {
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -81,21 +100,25 @@
         <thead>
             <tr>
                 <th>Nombre</th>
-                <th>ID</th>
+                <th>Tipo</th>
+                <th>Tamaño</th>
                 <th>Descripción</th>
-                <th>Cantidad</th>
                 <th>Valor Unitario</th>
                 <th>Imagen</th>
+                <th>Stock</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for product in products %}
+                {% set tipo = product.nombre_producto.split()[1].lower() %}
+                {% set tamano = product.nombre_producto.split()[2] %}
+                {% set stock = stock[tipo][tamano] if tipo in stock and tamano in stock[tipo] else 0 %}
                 <tr>
                     <td>{{ product.nombre_producto }}</td>
-                    <td>{{ product.product_id }}</td>
+                    <td>{{ tipo | capitalize }}</td>
+                    <td>{{ tamano }}</td>
                     <td>{{ product.descripcion }}</td>
-                    <td>{{ product.cantidad }}</td>
                     <td>${{ product.valor_unitario }}</td>
                     <td>
                         {% if product.imagen %}
@@ -105,8 +128,22 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a> |
-                        <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</a>
+                        {% if stock > 0 %}
+                            {{ stock }} unidades
+                        {% else %}
+                            <span class="out-of-stock">Sin stock</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if numero_documento == '1234567890' %}
+                            <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a> |
+                            <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</a> |
+                        {% endif %}
+                        {% if stock > 0 %}
+                            <a href="{{ url_for('buy', tipo=tipo, tamano=tamano) }}" class="buy-button">Comprar</a>
+                        {% else %}
+                            No disponible
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}

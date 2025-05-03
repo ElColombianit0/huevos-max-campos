@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 import json
+import os
+import logging
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 import re
@@ -13,18 +15,20 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
 
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Crear la aplicación Flask
 application = Flask(__name__, template_folder='templates')
 
 # Configuración de sesiones (usar cookies)
-application.config['SECRET_KEY'] = 'supersecretkey123'
+application.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey123')
 application.config['PERMANENT_SESSION_LIFETIME'] = 1800
 application.config['SESSION_PERMANENT'] = False
 
 # Configuración de MongoDB
-username = urllib.parse.quote_plus("sergio")
-password = urllib.parse.quote_plus("47iV@E9Jh8Fh9Fs")
-mongo_uri = f"mongodb+srv://{username}:{password}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority"
+mongo_uri = os.getenv('MONGO_URI', f"mongodb+srv://{urllib.parse.quote_plus('sergio')}:{urllib.parse.quote_plus('47iV@E9Jh8Fh9Fs')}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority")
 try:
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
     client.server_info()
@@ -32,9 +36,10 @@ try:
     users_collection = db['users']
     stock_collection = db['stock']
     products_collection = db['products']
-    purchases_collection = db['purchases']  # Nueva colección para las compras
+    purchases_collection = db['purchases']
+    logger.info("Conexión a MongoDB establecida con éxito")
 except Exception as e:
-    print(f"Error al conectar a MongoDB: {e}")
+    logger.error(f"Error al conectar a MongoDB: {e}")
     raise Exception("No se pudo conectar a MongoDB")
 
 # Eliminar índice obsoleto 'username_1' si existe
@@ -61,6 +66,7 @@ def initialize_admin():
             "tipo_persona": "juridica",
             "password": generate_password_hash("admin123")
         })
+    logger.info("Usuario admin inicializado con éxito")
 
 # Inicializar el stock
 def initialize_stock():
@@ -71,6 +77,7 @@ def initialize_stock():
             "blanco": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0}
         }
         stock_collection.insert_one(initial_stock)
+    logger.info("Stock inicializado con éxito")
 
 initialize_admin()
 initialize_stock()
@@ -85,7 +92,7 @@ PRECIOS = {
 @application.errorhandler(Exception)
 def handle_exception(e):
     error_message = f"Error inesperado: {str(e)}"
-    print(error_message)  # Para depuración
+    logger.error(error_message)
     return render_template('error.html', error=error_message), 500
 
 @application.route('/login', methods=['GET', 'POST'])
@@ -102,7 +109,7 @@ def login():
         session['correo'] = correo
         session['tipo_persona'] = user['tipo_persona']
         session['numero_documento'] = user['numero_documento']
-        print(f"Usuario {correo} ha iniciado sesión correctamente.")
+        logger.info(f"Usuario {correo} ha iniciado sesión correctamente.")
         return redirect(url_for('index'))
     return render_template('login.html', error=None, signup_error=None)
 
@@ -252,7 +259,9 @@ def list_products():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     products = list(products_collection.find())
-    return render_template('list_products.html', products=products)
+    # Obtener el stock actual para mostrar disponibilidad
+    stock_doc = stock_collection.find_one({"type": "huevos"})
+    return render_template('list_products.html', products=products, stock=stock_doc, numero_documento=session.get('numero_documento'))
 
 @application.route('/edit_product/<product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
@@ -386,7 +395,7 @@ def register_stock():
             print("Stock actualizado:", updated_stock)
             return render_template('register_stock.html', success=f"Se agregaron {cantidad} unidades al stock de huevos {tipo} tamaño {tamano}. Stock actual: {updated_stock}", error=None)
         except Exception as e:
-            print("Error:", str(e))
+            logger.error(f"Error en /register_stock: {str(e)}")
             return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None)
     return render_template('register_stock.html', error=None, success=None)
 
@@ -397,6 +406,11 @@ def buy():
     if session.get('numero_documento') == '1234567890':
         return redirect(url_for('index'))
     tipo_persona = session.get('tipo_persona')
+    
+    # Obtener tipo y tamaño desde los parámetros de la URL si es GET
+    tipo = request.args.get('tipo')
+    tamano = request.args.get('tamano')
+    
     if request.method == 'POST':
         try:
             tipo = request.form['tipo']
@@ -407,16 +421,16 @@ def buy():
             else:
                 unidad = request.form.get('unidad', 'cubeta')
             if tipo not in ['rojo', 'blanco'] or tamano not in ['A', 'AA', 'B', 'EXTRA']:
-                return render_template('buy.html', error="Tipo o tamaño inválido", tipo_persona=tipo_persona)
+                return render_template('buy.html', error="Tipo o tamaño inválido", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
             if unidad not in ['cubeta', 'docena'] and tipo_persona == 'natural':
-                return render_template('buy.html', error="Unidad inválida", tipo_persona=tipo_persona)
+                return render_template('buy.html', error="Unidad inválida", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
             if cantidad <= 0:
-                return render_template('buy.html', error="Cantidad debe ser mayor a cero", tipo_persona=tipo_persona)
+                return render_template('buy.html', error="Cantidad debe ser mayor a cero", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
             stock_doc = stock_collection.find_one({"type": "huevos"})
             stock = stock_doc
             unidades_totales = cantidad * 30 if unidad == 'cubeta' else cantidad * 12
             if stock[tipo][tamano] < unidades_totales:
-                return render_template('buy.html', error="No hay suficiente stock de este producto", tipo_persona=tipo_persona)
+                return render_template('buy.html', error="No hay suficiente stock de este producto", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
             stock[tipo][tamano] -= unidades_totales
             stock_collection.update_one(
                 {"type": "huevos"},
@@ -436,7 +450,7 @@ def buy():
             # Obtener el nombre del cliente
             user = users_collection.find_one({"correo": session.get('correo')})
             if not user:
-                return render_template('buy.html', error="Usuario no encontrado", tipo_persona=tipo_persona)
+                return render_template('buy.html', error="Usuario no encontrado", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
             nombre_cliente = user['nombre_completo']
 
             # Guardar los detalles de la compra en la colección 'purchases'
@@ -448,7 +462,7 @@ def buy():
                 "total": total
             }
             result = purchases_collection.insert_one(purchase)
-            print(f"Compra guardada en la base de datos con ID: {result.inserted_id}")
+            logger.info(f"Compra guardada en la base de datos con ID: {result.inserted_id}")
 
             pdf_buffer = generate_invoice(tipo, tamano, cantidad, unidad)
             return send_file(
@@ -458,13 +472,13 @@ def buy():
                 mimetype='application/pdf'
             )
         except KeyError:
-            return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona)
+            return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
         except ValueError:
-            return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona)
+            return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
         except Exception as e:
-            print(f"Error al procesar la compra: {str(e)}")
-            return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona)
-    return render_template('buy.html', tipo_persona=tipo_persona, error=None)
+            logger.error(f"Error al procesar la compra: {str(e)}")
+            return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+    return render_template('buy.html', tipo_persona=tipo_persona, error=None, tipo=tipo, tamano=tamano)
 
 @application.route('/admin/purchases', methods=['GET', 'POST'])
 def admin_purchases():
@@ -474,8 +488,7 @@ def admin_purchases():
         return redirect(url_for('index'))
 
     try:
-        # Verificar si la plantilla existe
-        print("Intentando renderizar purchases.html...")
+        logger.info("Intentando renderizar purchases.html...")
         purchases = []
         search_email = None
 
@@ -484,13 +497,13 @@ def admin_purchases():
             if search_email:
                 # Buscar compras por correo, insensible a mayúsculas
                 purchases = list(purchases_collection.find({"correo": {"$regex": f"^{search_email}$", "$options": "i"}}))
-                print(f"Compras encontradas para {search_email}: {purchases}")
+                logger.info(f"Compras encontradas para {search_email}: {purchases}")
             else:
                 return render_template('purchases.html', error="Por favor ingresa un correo para buscar", purchases=None, search_email=None)
 
         return render_template('purchases.html', purchases=purchases, search_email=search_email, error=None)
     except Exception as e:
-        print(f"Error en admin_purchases: {str(e)}")
+        logger.error(f"Error en admin_purchases: {str(e)}")
         raise Exception(f"No se pudo cargar la plantilla purchases.html: {str(e)}")
 
 def generate_invoice(tipo, tamano, cantidad, unidad):

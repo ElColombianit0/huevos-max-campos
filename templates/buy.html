@@ -37,6 +37,7 @@
             box-shadow: 5px 20px 50px #000;
         }
 
+        input[type="text"],
         select,
         input[type="number"] {
             width: 200px;
@@ -48,6 +49,11 @@
             border-radius: 5px;
             font-family: 'Jost', sans-serif;
             color: #333;
+        }
+
+        input[readonly] {
+            background: #d0caca;
+            cursor: not-allowed;
         }
 
         select {
@@ -103,18 +109,8 @@
         <p class="error">{{ error }}</p>
     {% endif %}
     <form method="POST" action="{{ url_for('buy') }}">
-        <select name="tipo" required>
-            <option value="">Tipo de huevo</option>
-            <option value="rojo">Rojo</option>
-            <option value="blanco">Blanco</option>
-        </select>
-        <select name="tamano" required>
-            <option value="">Tamaño</option>
-            <option value="A">A</option>
-            <option value="AA">AA</option>
-            <option value="B">B</option>
-            <option value="EXTRA">EXTRA</option>
-        </select>
+        <input type="text" name="tipo" value="{{ tipo | capitalize }}" readonly required>
+        <input type="text" name="tamano" value="{{ tamano }}" readonly required>
         <input type="number" name="cantidad" placeholder="Cantidad" required min="1">
         {% if tipo_persona == 'natural' %}
             <select name="unidad" required>
@@ -124,6 +120,6 @@
         {% endif %}
         <button type="submit">Comprar</button>
     </form>
-    <a href="{{ url_for('index') }}" class="back-link">Volver al Inicio</a>
+    <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista</a>
 </body>
 </html>
