@@ -92,27 +92,79 @@
         }
     </style>
     <script>
+        // Definir products como una variable global
+        const products = {{ products|tojson|safe }};
+
         function updateSizes() {
-            var tipo = document.getElementById('tipo').value;
-            var tamanoSelect = document.getElementById('tamano');
-            tamanoSelect.innerHTML = '';
-            var products = {{ products|tojson }};
-            var sizes = new Set();
-            for (var i = 0; i < products.length; i++) {
-                if (products[i].color === tipo) {
-                    sizes.add(products[i].size);
-                }
+            const tipo = document.getElementById('tipo').value;
+            const tamanoSelect = document.getElementById('tamano');
+            tamanoSelect.innerHTML = ''; // Limpiar opciones existentes
+
+            // Validar que products sea un array
+            let sizes = new Set();
+            if (Array.isArray(products)) {
+                products.forEach(product => {
+                    if (product.color === tipo && product.size) {
+                        sizes.add(product.size);
+                    }
+                });
+            } else {
+                console.error('Products no es un array válido:', products);
+                // Añadir opción de error
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                errorOption.text = 'Error al cargar tamaños';
+                errorOption.disabled = true;
+                errorOption.selected = true;
+                tamanoSelect.appendChild(errorOption);
+                return;
             }
-            sizes.forEach(function(size) {
-                var option = document.createElement('option');
-                option.value = size;
-                option.text = size;
+
+            // Añadir opción por defecto
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.text = 'Seleccione un tamaño';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            tamanoSelect.appendChild(defaultOption);
+
+            // Si no hay tamaños, mostrar mensaje
+            if (sizes.size === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.text = 'No hay tamaños disponibles';
+                option.disabled = true;
                 tamanoSelect.appendChild(option);
-            });
+            } else {
+                // Añadir los tamaños disponibles
+                sizes.forEach(size => {
+                    const option = document.createElement('option');
+                    option.value = size;
+                    option.text = size;
+                    tamanoSelect.appendChild(option);
+                });
+            }
         }
+
+        // Ejecutar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                updateSizes();
+            } catch (e) {
+                console.error('Error al actualizar tamaños:', e);
+                const tamanoSelect = document.getElementById('tamano');
+                tamanoSelect.innerHTML = ''; // Limpiar opciones
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                errorOption.text = 'Error al cargar tamaños';
+                errorOption.disabled = true;
+                errorOption.selected = true;
+                tamanoSelect.appendChild(errorOption);
+            }
+        });
     </script>
 </head>
-<body onload="updateSizes()">
+<body>
     <h1>Registrar Stock</h1>
     {% if error %}
         <p class="error">{{ error }}</p>
@@ -123,12 +175,14 @@
     <form method="POST">
         <label for="tipo">Tipo de Huevo:</label>
         <select name="tipo" id="tipo" onchange="updateSizes()" required>
+            <option value="" disabled selected>Seleccione un tipo</option>
             {% for color in colors %}
                 <option value="{{ color }}">{{ color | capitalize }}</option>
             {% endfor %}
         </select>
         <label for="tamano">Tamaño:</label>
         <select name="tamano" id="tamano" required>
+            <option value="" disabled selected>Seleccione un tamaño</option>
         </select>
         <label for="cantidad">Cantidad:</label>
         <input type="number" name="cantidad" id="cantidad" min="0" required>

@@ -485,7 +485,11 @@ def register_stock():
         return redirect(url_for('login'))
     if session.get('numero_documento') != '1234567890':
         return redirect(url_for('index'))
-    products = list(products_collection.find())
+    # Obtener productos y excluir el campo 'imagen' para evitar problemas con JSON
+    products = list(products_collection.find({}, {'imagen': 0}))
+    # Convertir ObjectId a string para que sea JSON-serializable
+    for product in products:
+        product['_id'] = str(product['_id'])
     colors = set(product['color'] for product in products if 'color' in product)
     if request.method == 'POST':
         try:
