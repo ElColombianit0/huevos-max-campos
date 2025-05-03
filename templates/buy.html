@@ -37,11 +37,9 @@
             box-shadow: 5px 20px 50px #000;
         }
 
-        input[type="text"],
-        select,
-        input[type="number"] {
+        input[type="number"],
+        select {
             width: 200px;
-            height: 40px;
             background: #e0dede;
             padding: 10px;
             border: none;
@@ -49,21 +47,6 @@
             border-radius: 5px;
             font-family: 'Jost', sans-serif;
             color: #333;
-        }
-
-        input[readonly] {
-            background: #d0caca;
-            cursor: not-allowed;
-        }
-
-        select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            cursor: pointer;
         }
 
         button {
@@ -104,21 +87,25 @@
     </style>
 </head>
 <body>
-    <h1>Comprar</h1>
+    <h1>Comprar Producto</h1>
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
     <form method="POST" action="{{ url_for('buy') }}">
-        <input type="text" name="tipo" value="{{ tipo | capitalize }}" readonly required>
-        <input type="text" name="tamano" value="{{ tamano }}" readonly required>
-        <input type="number" name="cantidad" placeholder="Cantidad" required min="1">
+        <input type="hidden" name="tipo" value="{{ tipo }}">
+        <input type="hidden" name="tamano" value="{{ tamano }}">
+        <label for="cantidad">Cantidad:</label>
+        <input type="number" name="cantidad" id="cantidad" min="1" required>
         {% if tipo_persona == 'natural' %}
-            <select name="unidad" required>
+            <label for="unidad">Unidad:</label>
+            <select name="unidad" id="unidad">
                 <option value="cubeta">Cubeta</option>
                 <option value="docena">Docena</option>
             </select>
+        {% else %}
+            <input type="hidden" name="unidad" value="cubeta">
         {% endif %}
-        <button type="submit">Comprar</button>
+        <button type="submit">Confirmar Compra</button>
     </form>
     <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista</a>
 </body>

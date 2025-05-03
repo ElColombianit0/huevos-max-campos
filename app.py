@@ -411,6 +411,7 @@ def buy():
     
     if request.method == 'POST':
         try:
+            logger.info(f"Datos recibidos en POST: {request.form}")
             tipo = request.form['tipo']
             tamano = request.form['tamano']
             cantidad = int(request.form['cantidad'])
@@ -469,14 +470,19 @@ def buy():
                 download_name=f"factura_{tipo}_{tamano}_{cantidad}.pdf",
                 mimetype='application/pdf'
             )
-        except KeyError:
+        except KeyError as e:
+            logger.error(f"Error de clave faltante: {str(e)}")
             return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
-        except ValueError:
+        except ValueError as e:
+            logger.error(f"Error de valor inválido: {str(e)}")
             return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
         except Exception as e:
             logger.error(f"Error al procesar la compra: {str(e)}")
             return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
-    return render_template('buy.html', tipo_persona=tipo_persona, error=None, tipo=tipo, tamano=tamano)
+    elif request.method == 'GET' and tipo and tamano:
+        return render_template('buy.html', tipo_persona=tipo_persona, error=None, tipo=tipo, tamano=tamano)
+    else:
+        return redirect(url_for('list_products'))
 
 @application.route('/admin/purchases', methods=['GET', 'POST'])
 def admin_purchases():
