@@ -32,12 +32,13 @@
             background: #24243e;
             border-radius: 10px;
             box-shadow: 5px 20px 50px #000;
+            margin-bottom: 20px;
         }
 
         th, td {
             padding: 15px;
             text-align: left;
-            border-bottom: 1px solid #573b8a;
+            border-bottom: 1px solid #444;
         }
 
         th {
@@ -45,18 +46,18 @@
             color: #fff;
         }
 
-        td img {
-            max-width: 100px;
-            border-radius: 5px;
+        td {
+            color: #e0dede;
         }
 
-        a {
+        .action-links a {
             color: #6d44b8;
             text-decoration: none;
+            margin-right: 10px;
             font-weight: bold;
         }
 
-        a:hover {
+        .action-links a:hover {
             color: #573b8a;
             text-decoration: underline;
         }
@@ -74,23 +75,15 @@
             text-decoration: underline;
         }
 
-        .buy-button {
-            display: inline-block;
-            padding: 5px 10px;
-            background: #573b8a;
-            color: #fff;
-            border-radius: 5px;
-            transition: .2s ease-in;
-        }
-
-        .buy-button:hover {
-            background: #6d44b8;
+        .buy-link {
+            color: #28a745;
             text-decoration: none;
+            font-weight: bold;
         }
 
-        .out-of-stock {
-            color: red;
-            font-weight: bold;
+        .buy-link:hover {
+            color: #218838;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -100,49 +93,34 @@
         <thead>
             <tr>
                 <th>Nombre</th>
+                <th>ID</th>
+                <th>Tipo</th>
                 <th>Tamaño</th>
-                <th>Color</th>
                 <th>Descripción</th>
                 <th>Valor Unitario</th>
-                <th>Imagen</th>
                 <th>Stock</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for product in products %}
-                {% set color = product.color if 'color' in product else 'N/A' %}
-                {% set size = product.size if 'size' in product else 'N/A' %}
-                {% set stock = stock[color][size] if color in stock and size in stock[color] else 0 %}
                 <tr>
                     <td>{{ product.nombre_producto }}</td>
-                    <td>{{ size if size != 'N/A' else 'N/A' }}</td>
-                    <td>{{ color | capitalize if color != 'N/A' else 'N/A' }}</td>
+                    <td>{{ product.product_id }}</td>
+                    <td>{{ product.color | capitalize }}</td>
+                    <td>{{ product.size }}</td>
                     <td>{{ product.descripcion }}</td>
-                    <td>${{ product.valor_unitario }}</td>
-                    <td>
-                        {% if product.imagen %}
-                            <img src="{{ url_for('view_image', product_id=product.product_id) }}" alt="{{ product.nombre_producto }}">
-                        {% else %}
-                            Sin imagen
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if stock > 0 %}
-                            {{ stock }} unidades
-                        {% else %}
-                            <span class="out-of-stock">Sin stock</span>
-                        {% endif %}
-                    </td>
-                    <td>
+                    <td>${{ product.valor_unitario | float | round(2) }}</td>
+                    <td>{{ product.stock }}</td>
+                    <td class="action-links">
                         {% if numero_documento == '1234567890' %}
-                            <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a> |
-                            <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</a> |
-                        {% endif %}
-                        {% if stock > 0 and numero_documento != '1234567890' and color != 'N/A' and size != 'N/A' %}
-                            <a href="{{ url_for('buy', tipo=color, tamano=size) }}" class="buy-button">Comprar</a>
-                        {% elif numero_documento != '1234567890' %}
-                            No disponible
+                            <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a>
+                            <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de que deseas eliminar este producto?')">Eliminar</a>
+                            {% if product.imagen %}
+                                <a href="{{ url_for('view_image', product_id=product.product_id) }}">Ver Imagen</a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('buy', tipo=product.color, tamano=product.size) }}" class="buy-link">Comprar</a>
                         {% endif %}
                     </td>
                 </tr>

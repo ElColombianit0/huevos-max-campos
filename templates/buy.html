@@ -37,8 +37,8 @@
             box-shadow: 5px 20px 50px #000;
         }
 
-        input[type="number"],
-        select {
+        select,
+        input[type="number"] {
             width: 200px;
             background: #e0dede;
             padding: 10px;
@@ -91,22 +91,20 @@
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
-    <form method="POST" action="{{ url_for('buy') }}">
+    <form method="POST">
         <input type="hidden" name="tipo" value="{{ tipo }}">
         <input type="hidden" name="tamano" value="{{ tamano }}">
         <label for="cantidad">Cantidad:</label>
         <input type="number" name="cantidad" id="cantidad" min="1" required>
-        {% if tipo_persona == 'natural' %}
+        {% if tipo_persona == 'natural' and is_egg %}
             <label for="unidad">Unidad:</label>
-            <select name="unidad" id="unidad">
-                <option value="cubeta">Cubeta</option>
-                <option value="docena">Docena</option>
+            <select name="unidad" id="unidad" required>
+                <option value="cubeta">Cubeta (30 huevos)</option>
+                <option value="docena">Docena (12 huevos)</option>
             </select>
-        {% else %}
-            <input type="hidden" name="unidad" value="cubeta">
         {% endif %}
-        <button type="submit">Confirmar Compra</button>
+        <button type="submit">Comprar</button>
     </form>
-    <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista</a>
+    <a href="{{ url_for('list_products') }}" class="back-link">Volver a Productos</a>
 </body>
 </html>
