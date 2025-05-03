@@ -100,8 +100,8 @@
         <thead>
             <tr>
                 <th>Nombre</th>
-                <th>Color</th>
                 <th>Tamaño</th>
+                <th>Color</th>
                 <th>Descripción</th>
                 <th>Valor Unitario</th>
                 <th>Imagen</th>
@@ -113,13 +113,13 @@
             {% for product in products %}
                 {% set parts = product.nombre_producto.split() %}
                 {% if parts|length >= 3 %}
-                    {% set color = parts[1].lower() %}
-                    {% set size = parts[2] %}
+                    {% set size = parts[1] %}
+                    {% set color = parts[2].lower() %}
                     {% set stock = stock[color][size] if color in stock and size in stock[color] else 0 %}
                     <tr>
                         <td>{{ product.nombre_producto }}</td>
-                        <td>{{ color | capitalize }}</td>
                         <td>{{ size }}</td>
+                        <td>{{ color | capitalize }}</td>
                         <td>{{ product.descripcion }}</td>
                         <td>${{ product.valor_unitario }}</td>
                         <td>
