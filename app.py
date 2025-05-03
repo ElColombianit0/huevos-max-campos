@@ -223,7 +223,6 @@ def register_product():
             nombre_producto = request.form.get('nombre_producto')
             product_id = request.form.get('product_id')
             descripcion = request.form.get('descripcion')
-            # No permitimos editar la cantidad aquí, se maneja por stock
             valor_unitario = float(request.form.get('valor_unitario'))
             imagen = request.files.get('imagen')
             if not nombre_producto or not re.match(r'^[a-zA-Z\s]+$', nombre_producto):
@@ -257,6 +256,13 @@ def list_products():
         return redirect(url_for('login'))
     products = list(products_collection.find())
     stock_doc = stock_collection.find_one({"type": "huevos"})
+    if not stock_doc:
+        stock_doc = {
+            "type": "huevos",
+            "rojo": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0},
+            "blanco": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0}
+        }
+        stock_collection.insert_one(stock_doc)
     return render_template('list_products.html', products=products, stock=stock_doc, numero_documento=session.get('numero_documento'))
 
 @application.route('/edit_product/<product_id>', methods=['GET', 'POST'])
