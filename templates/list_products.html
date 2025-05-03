@@ -100,7 +100,7 @@
         <thead>
             <tr>
                 <th>Nombre</th>
-                <th>Tipo</th>
+                <th>Color</th>
                 <th>Tamaño</th>
                 <th>Descripción</th>
                 <th>Valor Unitario</th>
@@ -111,13 +111,13 @@
         </thead>
         <tbody>
             {% for product in products %}
-                {% set tipo = product.nombre_producto.split()[1].lower() %}
-                {% set tamano = product.nombre_producto.split()[2] %}
-                {% set stock = stock[tipo][tamano] if tipo in stock and tamano in stock[tipo] else 0 %}
+                {% set color = product.nombre_producto.split()[1].lower() %}
+                {% set size = product.nombre_producto.split()[2] %}
+                {% set stock = stock[color][size] if color in stock and size in stock[color] else 0 %}
                 <tr>
                     <td>{{ product.nombre_producto }}</td>
-                    <td>{{ tipo | capitalize }}</td>
-                    <td>{{ tamano }}</td>
+                    <td>{{ color | capitalize }}</td>
+                    <td>{{ size }}</td>
                     <td>{{ product.descripcion }}</td>
                     <td>${{ product.valor_unitario }}</td>
                     <td>
@@ -139,9 +139,9 @@
                             <a href="{{ url_for('edit_product', product_id=product.product_id) }}">Editar</a> |
                             <a href="{{ url_for('delete_product', product_id=product.product_id) }}" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</a> |
                         {% endif %}
-                        {% if stock > 0 %}
-                            <a href="{{ url_for('buy', tipo=tipo, tamano=tamano) }}" class="buy-button">Comprar</a>
-                        {% else %}
+                        {% if stock > 0 and numero_documento != '1234567890' %}
+                            <a href="{{ url_for('buy', tipo=color, tamano=size) }}" class="buy-button">Comprar</a>
+                        {% elif numero_documento != '1234567890' %}
                             No disponible
                         {% endif %}
                     </td>

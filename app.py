@@ -223,7 +223,7 @@ def register_product():
             nombre_producto = request.form.get('nombre_producto')
             product_id = request.form.get('product_id')
             descripcion = request.form.get('descripcion')
-            cantidad = int(request.form.get('cantidad'))
+            # No permitimos editar la cantidad aquí, se maneja por stock
             valor_unitario = float(request.form.get('valor_unitario'))
             imagen = request.files.get('imagen')
             if not nombre_producto or not re.match(r'^[a-zA-Z\s]+$', nombre_producto):
@@ -234,8 +234,6 @@ def register_product():
                 return render_template('register_product.html', error="El ID del producto ya está registrado")
             if not descripcion:
                 return render_template('register_product.html', error="La descripción no puede estar vacía")
-            if cantidad < 0:
-                return render_template('register_product.html', error="La cantidad no puede ser negativa")
             if valor_unitario <= 0:
                 return render_template('register_product.html', error="El valor unitario debe ser mayor a cero")
             imagen_data = None
@@ -245,7 +243,6 @@ def register_product():
                 "nombre_producto": nombre_producto,
                 "product_id": product_id,
                 "descripcion": descripcion,
-                "cantidad": cantidad,
                 "valor_unitario": valor_unitario,
                 "imagen": imagen_data
             })
@@ -259,7 +256,6 @@ def list_products():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     products = list(products_collection.find())
-    # Obtener el stock actual para mostrar disponibilidad
     stock_doc = stock_collection.find_one({"type": "huevos"})
     return render_template('list_products.html', products=products, stock=stock_doc, numero_documento=session.get('numero_documento'))
 
@@ -277,7 +273,6 @@ def edit_product(product_id):
             nombre_producto = request.form.get('nombre_producto')
             nuevo_product_id = request.form.get('product_id')
             descripcion = request.form.get('descripcion')
-            cantidad = int(request.form.get('cantidad'))
             valor_unitario = float(request.form.get('valor_unitario'))
             imagen = request.files.get('imagen')
             if not nombre_producto or not re.match(r'^[a-zA-Z\s]+$', nombre_producto):
@@ -288,8 +283,6 @@ def edit_product(product_id):
                 return render_template('edit_product.html', product=product, error="El ID del producto ya está registrado")
             if not descripcion:
                 return render_template('edit_product.html', product=product, error="La descripción no puede estar vacía")
-            if cantidad < 0:
-                return render_template('edit_product.html', product=product, error="La cantidad no puede ser negativa")
             if valor_unitario <= 0:
                 return render_template('edit_product.html', product=product, error="El valor unitario debe ser mayor a cero")
             imagen_data = product.get('imagen')
@@ -301,7 +294,6 @@ def edit_product(product_id):
                     "nombre_producto": nombre_producto,
                     "product_id": nuevo_product_id,
                     "descripcion": descripcion,
-                    "cantidad": cantidad,
                     "valor_unitario": valor_unitario,
                     "imagen": imagen_data
                 }}
