@@ -2,21 +2,18 @@
     "version": 2,
     "builds": [
         {
-            "src": "app.py",
-            "use": "@ardnt/vercel-python-wsgi",
-            "config": { "maxLambdaSize": "15mb" }
+            "src": "wsgi.py",
+            "use": "@vercel/python",
+            "config": {
+                "maxLambdaSize": "15mb",
+                "runtime": "python3.9"
+            }
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "/"
+            "dest": "wsgi.py"
         }
-    ],
-    "env": {
-        "MONGO_URI": "@mongo_uri",
-        "GOOGLE_CLIENT_ID": "@google_client_id",
-        "GOOGLE_CLIENT_SECRET": "@google_client_secret",
-        "SECRET_KEY": "@secret_key"
-    }
-}
+    ]
+  }

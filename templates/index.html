@@ -1,28 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Inicio - Huevos Max Campos</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huevos Max Campos - Panel Principal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Jost', sans-serif;
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        a.button {
+            width: 200px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            background: #573b8a;
+            font-size: 1em;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: .2s ease-in;
+        }
+
+        a.button:hover {
+            background: #6d44b8;
+        }
+
+        a.logout, a.edit-profile, a.delete-profile {
+            margin-top: 20px;
+            color: #6d44b8;
+            font-size: 0.9em;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a.logout:hover, a.edit-profile:hover, a.delete-profile:hover {
+            color: #573b8a;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
+    <h1>Huevos Max Campos</h1>
     <div class="container">
-        <nav>
-            <a href="{{ url_for('index') }}">Inicio</a>
-            <a href="{{ url_for('inventory') }}">Inventario</a>
-            <a href="{{ url_for('list_products') }}">Productos</a>
-            <a href="{{ url_for('buy') }}">Comprar</a>
-            <a href="{{ url_for('edit_profile') }}">Perfil</a>
-            <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
-        </nav>
-        <h1>Bienvenido a Huevos Max Campos</h1>
-        <p>Usuario: {{ numero_documento }}</p>
-        <p>Tipo: {{ tipo_persona }}</p>
-        {% if numero_documento == '1234567890' %}
-            <p>Eres administrador. Puedes gestionar productos y stock.</p>
-            <a href="{{ url_for('register_stock') }}"><button>Gestionar Stock</button></a>
-            <a href="{{ url_for('register_product') }}"><button>Registrar Producto</button></a>
+        {% if tipo_persona == 'juridica' and numero_documento == '1234567890' %}
+            <a href="{{ url_for('register_stock') }}" class="button">Registrar Stock</a>
+            <a href="{{ url_for('register_product') }}" class="button">Registrar Producto</a>
+            <a href="{{ url_for('list_products') }}" class="button">Ver Productos</a>
+            <a href="{{ url_for('admin_purchases') }}" class="button">Buscar Compras de Clientes</a>
+        {% else %}
+            <a href="{{ url_for('buy') }}" class="button">Comprar Huevos</a>
         {% endif %}
+        <a href="{{ url_for('edit_profile') }}" class="edit-profile">Editar Perfil</a>
+        {% if numero_documento != '1234567890' %}
+            <a href="{{ url_for('delete_profile') }}" class="delete-profile">Eliminar Perfil</a>
+        {% endif %}
+        <a href="{{ url_for('logout') }}" class="logout">Cerrar Sesión</a>
     </div>
 </body>
 </html>

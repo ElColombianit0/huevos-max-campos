@@ -1,48 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comprar - Huevos Max Campos</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Jost', sans-serif;
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: #24243e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 5px 20px 50px #000;
+        }
+
+        select,
+        input[type="number"] {
+            width: 200px;
+            height: 40px;
+            background: #e0dede;
+            padding: 10px;
+            border: none;
+            outline: none;
+            border-radius: 5px;
+            font-family: 'Jost', sans-serif;
+            color: #333;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            cursor: pointer;
+        }
+
+        button {
+            width: 200px;
+            height: 40px;
+            color: #fff;
+            background: #573b8a;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            transition: .2s ease-in;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #6d44b8;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            margin-top: 20px;
+            color: #6d44b8;
+            font-size: 0.9em;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            color: #573b8a;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <nav>
-            <a href="{{ url_for('index') }}">Inicio</a>
-            <a href="{{ url_for('inventory') }}">Inventario</a>
-            <a href="{{ url_for('list_products') }}">Productos</a>
-            <a href="{{ url_for('buy') }}">Comprar</a>
-            <a href="{{ url_for('edit_profile') }}">Perfil</a>
-            <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
-        </nav>
-        <h1>Comprar Huevos</h1>
-        {% if error %}
-            <p class="error">{{ error }}</p>
+    <h1>Comprar</h1>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    <form method="POST" action="{{ url_for('buy') }}">
+        <select name="tipo" required>
+            <option value="">Tipo de huevo</option>
+            <option value="rojo">Rojo</option>
+            <option value="blanco">Blanco</option>
+        </select>
+        <select name="tamano" required>
+            <option value="">Tamaño</option>
+            <option value="A">A</option>
+            <option value="AA">AA</option>
+            <option value="B">B</option>
+            <option value="EXTRA">EXTRA</option>
+        </select>
+        <input type="number" name="cantidad" placeholder="Cantidad" required min="1">
+        {% if tipo_persona == 'natural' %}
+            <select name="unidad" required>
+                <option value="cubeta">Cubeta</option>
+                <option value="docena">Docena</option>
+            </select>
         {% endif %}
-        <form method="POST" action="{{ url_for('buy') }}">
-            <label>Tipo:</label>
-            <select name="tipo" required>
-                <option value="rojo">Rojo</option>
-                <option value="blanco">Blanco</option>
-            </select>
-            <label>Tamaño:</label>
-            <select name="tamano" required>
-                <option value="A">A</option>
-                <option value="AA">AA</option>
-                <option value="B">B</option>
-                <option value="EXTRA">EXTRA</option>
-            </select>
-            {% if tipo_persona == 'natural' %}
-                <label>Unidad:</label>
-                <select name="unidad" required>
-                    <option value="cubeta">Cubeta (30 huevos)</option>
-                    <option value="docena">Docena (12 huevos)</option>
-                </select>
-            {% endif %}
-            <label>Cantidad:</label>
-            <input type="number" name="cantidad" min="1" required>
-            <button type="submit">Comprar</button>
-        </form>
-    </div>
+        <button type="submit">Comprar</button>
+    </form>
+    <a href="{{ url_for('index') }}" class="back-link">Volver al Inicio</a>
 </body>
 </html>
