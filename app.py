@@ -37,6 +37,7 @@ try:
     stock_collection = db['stock']
     products_collection = db['products']
     purchases_collection = db['purchases']
+    prices_collection = db['prices']
     logger.info("Conexión a MongoDB establecida con éxito")
 except Exception as e:
     logger.error(f"Error al conectar a MongoDB: {e}")
@@ -68,8 +69,8 @@ def initialize_admin():
         })
     logger.info("Usuario admin inicializado con éxito")
 
-# Inicializar el stock
-def initialize_stock():
+# Inicializar el stock y precios
+def initialize_stock_and_prices():
     if stock_collection.count_documents({}) == 0:
         initial_stock = {
             "type": "huevos",
@@ -77,16 +78,30 @@ def initialize_stock():
             "blanco": {"A": 0, "AA": 0, "B": 0, "EXTRA": 0}
         }
         stock_collection.insert_one(initial_stock)
-    logger.info("Stock inicializado con éxito")
+    if prices_collection.count_documents({}) == 0:
+        initial_prices = {
+            "type": "huevos",
+            "rojo": {"A": 12000, "AA": 13500, "B": 11000, "EXTRA": 15000},
+            "blanco": {"A": 10000, "AA": 11500, "B": 9500, "EXTRA": 14000}
+        }
+        prices_collection.insert_one(initial_prices)
+    logger.info("Stock y precios inicializados con éxito")
 
 initialize_admin()
-initialize_stock()
+initialize_stock_and_prices()
 
-# Definir precios por cubeta
-PRECIOS = {
-    "rojo": {"A": 12000, "AA": 13500, "B": 11000, "EXTRA": 15000},
-    "blanco": {"A": 10000, "AA": 11500, "B": 9500, "EXTRA": 14000}
-}
+# Cargar precios dinámicamente desde la base de datos
+def load_prices():
+    prices_doc = prices_collection.find_one({"type": "huevos"})
+    if not prices_doc:
+        prices_doc = {
+            "type": "huevos",
+            "rojo": {"A": 12000, "AA": 13500, "B": 11000, "EXTRA": 15000},
+            "blanco": {"A": 10000, "AA": 11500, "B": 9500, "EXTRA": 14000}
+        }
+        prices_collection.insert_one(prices_doc)
+    prices = {k: v for k, v in prices_doc.items() if k != "type" and k != "_id"}
+    return prices
 
 # Manejador de errores global
 @application.errorhandler(Exception)
@@ -222,6 +237,8 @@ def register_product():
         try:
             nombre_producto = request.form.get('nombre_producto')
             product_id = request.form.get('product_id')
+            color = request.form.get('color').lower()
+            size = request.form.get('size').upper()
             descripcion = request.form.get('descripcion')
             valor_unitario = float(request.form.get('valor_unitario'))
             imagen = request.files.get('imagen')
@@ -231,6 +248,10 @@ def register_product():
                 return render_template('register_product.html', error="El ID del producto debe ser alfanumérico")
             if products_collection.find_one({"product_id": product_id}):
                 return render_template('register_product.html', error="El ID del producto ya está registrado")
+            if not color or not re.match(r'^[a-zA-Z\s]+$', color):
+                return render_template('register_product.html', error="El color solo puede contener letras y espacios")
+            if not size or not re.match(r'^[a-zA-Z0-9]+$', size):
+                return render_template('register_product.html', error="El tamaño debe ser alfanumérico")
             if not descripcion:
                 return render_template('register_product.html', error="La descripción no puede estar vacía")
             if valor_unitario <= 0:
@@ -238,16 +259,60 @@ def register_product():
             imagen_data = None
             if imagen:
                 imagen_data = imagen.read()
+
+            # Guardar el producto con color y tamaño
             products_collection.insert_one({
                 "nombre_producto": nombre_producto,
                 "product_id": product_id,
+                "color": color,
+                "size": size,
                 "descripcion": descripcion,
                 "valor_unitario": valor_unitario,
                 "imagen": imagen_data
             })
-            logger.info(f"Producto registrado: {nombre_producto}, ID: {product_id}")
+
+            # Actualizar el stock dinámicamente
+            stock_doc = stock_collection.find_one({"type": "huevos"})
+            if not stock_doc:
+                stock_doc = {"type": "huevos"}
+                stock_collection.insert_one(stock_doc)
+            
+            if color not in stock_doc:
+                stock_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {color: {size: 0}}},
+                    upsert=True
+                )
+            elif size not in stock_doc[color]:
+                stock_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {f"{color}.{size}": 0}},
+                    upsert=True
+                )
+
+            # Actualizar los precios dinámicamente
+            prices_doc = prices_collection.find_one({"type": "huevos"})
+            if not prices_doc:
+                prices_doc = {"type": "huevos"}
+                prices_collection.insert_one(prices_doc)
+            
+            if color not in prices_doc:
+                prices_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {color: {size: valor_unitario}}},
+                    upsert=True
+                )
+            elif size not in prices_doc[color]:
+                prices_collection.update_one(
+                    {"type": "huevos"},
+                    {"$set": {f"{color}.{size}": valor_unitario}},
+                    upsert=True
+                )
+
+            logger.info(f"Producto registrado: {nombre_producto}, ID: {product_id}, Color: {color}, Tamaño: {size}")
             return redirect(url_for('list_products'))
-        except (KeyError, ValueError):
+        except (KeyError, ValueError) as e:
+            logger.error(f"Error al registrar producto: {str(e)}")
             return render_template('register_product.html', error="Datos inválidos. Asegúrate de completar todos los campos correctamente.")
     return render_template('register_product.html', error=None)
 
@@ -281,6 +346,8 @@ def edit_product(product_id):
         try:
             nombre_producto = request.form.get('nombre_producto')
             nuevo_product_id = request.form.get('product_id')
+            color = request.form.get('color').lower()
+            size = request.form.get('size').upper()
             descripcion = request.form.get('descripcion')
             valor_unitario = float(request.form.get('valor_unitario'))
             imagen = request.files.get('imagen')
@@ -290,6 +357,10 @@ def edit_product(product_id):
                 return render_template('edit_product.html', product=product, error="El ID del producto debe ser alfanumérico")
             if nuevo_product_id != product_id and products_collection.find_one({"product_id": nuevo_product_id}):
                 return render_template('edit_product.html', product=product, error="El ID del producto ya está registrado")
+            if not color or not re.match(r'^[a-zA-Z\s]+$', color):
+                return render_template('edit_product.html', product=product, error="El color solo puede contener letras y espacios")
+            if not size or not re.match(r'^[a-zA-Z0-9]+$', size):
+                return render_template('edit_product.html', product=product, error="El tamaño debe ser alfanumérico")
             if not descripcion:
                 return render_template('edit_product.html', product=product, error="La descripción no puede estar vacía")
             if valor_unitario <= 0:
@@ -297,16 +368,64 @@ def edit_product(product_id):
             imagen_data = product.get('imagen')
             if imagen:
                 imagen_data = imagen.read()
+
+            # Actualizar el producto
             products_collection.update_one(
                 {"product_id": product_id},
                 {"$set": {
                     "nombre_producto": nombre_producto,
                     "product_id": nuevo_product_id,
+                    "color": color,
+                    "size": size,
                     "descripcion": descripcion,
                     "valor_unitario": valor_unitario,
                     "imagen": imagen_data
                 }}
             )
+
+            # Actualizar el stock dinámicamente si el color o tamaño cambió
+            old_color = product.get('color')
+            old_size = product.get('size')
+            if old_color != color or old_size != size:
+                stock_doc = stock_collection.find_one({"type": "huevos"})
+                if stock_doc and old_color in stock_doc and old_size in stock_doc[old_color]:
+                    old_stock = stock_doc[old_color][old_size]
+                    # Mover el stock al nuevo color/tamaño
+                    stock_collection.update_one(
+                        {"type": "huevos"},
+                        {"$set": {f"{color}.{size}": old_stock}}
+                    )
+                    # Eliminar el stock antiguo si es necesario
+                    stock_collection.update_one(
+                        {"type": "huevos"},
+                        {"$unset": {f"{old_color}.{old_size}": ""}}
+                    )
+                else:
+                    stock_collection.update_one(
+                        {"type": "huevos"},
+                        {"$set": {f"{color}.{size}": 0}},
+                        upsert=True
+                    )
+
+            # Actualizar los precios dinámicamente
+            if old_color != color or old_size != size:
+                prices_doc = prices_collection.find_one({"type": "huevos"})
+                if prices_doc and old_color in prices_doc and old_size in prices_doc[old_color]:
+                    prices_collection.update_one(
+                        {"type": "huevos"},
+                        {"$set": {f"{color}.{size}": valor_unitario}}
+                    )
+                    prices_collection.update_one(
+                        {"type": "huevos"},
+                        {"$unset": {f"{old_color}.{old_size}": ""}}
+                    )
+                else:
+                    prices_collection.update_one(
+                        {"type": "huevos"},
+                        {"$set": {f"{color}.{size}": valor_unitario}},
+                        upsert=True
+                    )
+
             return redirect(url_for('list_products'))
         except (KeyError, ValueError):
             return render_template('edit_product.html', product=product, error="Datos inválidos. Asegúrate de completar todos los campos correctamente.")
@@ -318,6 +437,21 @@ def delete_product(product_id):
         return redirect(url_for('login'))
     if session.get('numero_documento') != '1234567890':
         return redirect(url_for('index'))
+    product = products_collection.find_one({"product_id": product_id})
+    if product:
+        color = product.get('color')
+        size = product.get('size')
+        if color and size:
+            # Eliminar el stock asociado
+            stock_collection.update_one(
+                {"type": "huevos"},
+                {"$unset": {f"{color}.{size}": ""}}
+            )
+            # Eliminar el precio asociado
+            prices_collection.update_one(
+                {"type": "huevos"},
+                {"$unset": {f"{color}.{size}": ""}}
+            )
     products_collection.delete_one({"product_id": product_id})
     return redirect(url_for('list_products'))
 
@@ -351,24 +485,28 @@ def register_stock():
         return redirect(url_for('login'))
     if session.get('numero_documento') != '1234567890':
         return redirect(url_for('index'))
+    products = list(products_collection.find())
+    colors = set(product['color'] for product in products if 'color' in product)
     if request.method == 'POST':
         try:
             print("Datos recibidos:", request.form)
             tipo = request.form.get('tipo').lower()
-            tamano = request.form.get('tamano')
+            tamano = request.form.get('tamano').upper()
             cantidad_str = request.form.get('cantidad')
-            if not tipo or tipo not in ['rojo', 'blanco']:
-                return render_template('register_stock.html', error="Tipo de huevo inválido", success=None)
-            if not tamano or tamano not in ['A', 'AA', 'B', 'EXTRA']:
-                return render_template('register_stock.html', error="Tamaño inválido", success=None)
+            if not tipo or tipo not in colors:
+                return render_template('register_stock.html', error="Tipo de huevo inválido", success=None, colors=colors, products=products)
+            # Validar que el tamaño exista para el tipo seleccionado
+            valid_sizes = set(product['size'] for product in products if product['color'] == tipo)
+            if not tamano or tamano not in valid_sizes:
+                return render_template('register_stock.html', error="Tamaño inválido", success=None, colors=colors, products=products)
             if not cantidad_str:
-                return render_template('register_stock.html', error="La cantidad no puede estar vacía", success=None)
+                return render_template('register_stock.html', error="La cantidad no puede estar vacía", success=None, colors=colors, products=products)
             try:
                 cantidad = int(cantidad_str)
             except ValueError:
-                return render_template('register_stock.html', error="Cantidad debe ser un número entero", success=None)
+                return render_template('register_stock.html', error="Cantidad debe ser un número entero", success=None, colors=colors, products=products)
             if cantidad < 0:
-                return render_template('register_stock.html', error="Cantidad no puede ser negativa", success=None)
+                return render_template('register_stock.html', error="Cantidad no puede ser negativa", success=None, colors=colors, products=products)
             stock_doc = stock_collection.find_one({"type": "huevos"})
             print("Documento de stock encontrado:", stock_doc)
             if not stock_doc:
@@ -381,7 +519,7 @@ def register_stock():
                 stock_doc = stock_collection.find_one({"type": "huevos"})
                 print("Documento de stock creado:", stock_doc)
             if tipo not in stock_doc or tamano not in stock_doc[tipo]:
-                return render_template('register_stock.html', error="Estructura de stock inválida", success=None)
+                return render_template('register_stock.html', error="Estructura de stock inválida", success=None, colors=colors, products=products)
             current_stock = stock_doc[tipo][tamano]
             new_stock = current_stock + cantidad
             result = stock_collection.update_one(
@@ -390,15 +528,15 @@ def register_stock():
             )
             print("Resultado de la actualización:", result.modified_count)
             if result.modified_count == 0:
-                return render_template('register_stock.html', error="No se pudo actualizar el stock, intenta de nuevo", success=None)
+                return render_template('register_stock.html', error="No se pudo actualizar el stock, intenta de nuevo", success=None, colors=colors, products=products)
             updated_stock_doc = stock_collection.find_one({"type": "huevos"})
             updated_stock = updated_stock_doc[tipo][tamano]
             print("Stock actualizado:", updated_stock)
-            return render_template('register_stock.html', success=f"Se agregaron {cantidad} unidades al stock de huevos {tipo} tamaño {tamano}. Stock actual: {updated_stock}", error=None)
+            return render_template('register_stock.html', success=f"Se agregaron {cantidad} unidades al stock de huevos {tipo} tamaño {tamano}. Stock actual: {updated_stock}", error=None, colors=colors, products=products)
         except Exception as e:
             logger.error(f"Error en /register_stock: {str(e)}")
-            return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None)
-    return render_template('register_stock.html', error=None, success=None)
+            return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None, colors=colors, products=products)
+    return render_template('register_stock.html', error=None, success=None, colors=colors, products=products)
 
 @application.route('/buy', methods=['GET', 'POST'])
 def buy():
@@ -422,7 +560,10 @@ def buy():
                 unidad = 'cubeta'
             else:
                 unidad = request.form.get('unidad', 'cubeta')
-            if tipo not in ['rojo', 'blanco'] or tamano not in ['A', 'AA', 'B', 'EXTRA']:
+            products = list(products_collection.find())
+            colors = set(product['color'] for product in products if 'color' in product)
+            valid_sizes = set(product['size'] for product in products if product['color'] == tipo)
+            if tipo not in colors or tamano not in valid_sizes:
                 return render_template('buy.html', error="Tipo o tamaño inválido", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
             if unidad not in ['cubeta', 'docena'] and tipo_persona == 'natural':
                 return render_template('buy.html', error="Unidad inválida", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
@@ -439,7 +580,8 @@ def buy():
                 {"$set": {f"{tipo}.{tamano}": stock[tipo][tamano]}}
             )
 
-            # Calcular el precio total para guardar en la colección
+            # Cargar precios dinámicamente
+            PRECIOS = load_prices()
             precio_cubeta = PRECIOS[tipo][tamano]
             if unidad == 'cubeta':
                 precio_unitario = precio_cubeta
@@ -514,6 +656,7 @@ def admin_purchases():
         raise Exception(f"No se pudo cargar la plantilla purchases.html: {str(e)}")
 
 def generate_invoice(tipo, tamano, cantidad, unidad):
+    PRECIOS = load_prices()
     precio_cubeta = PRECIOS[tipo][tamano]
     if unidad == 'cubeta':
         precio_unitario = precio_cubeta

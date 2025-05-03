@@ -111,9 +111,8 @@
         </thead>
         <tbody>
             {% for product in products %}
-                {% set parts = product.nombre_producto.split() %}
-                {% set size = parts[1].upper() if parts|length >= 2 else 'N/A' %}
-                {% set color = parts[2].lower() if parts|length >= 3 else 'N/A' %}
+                {% set color = product.color if 'color' in product else 'N/A' %}
+                {% set size = product.size if 'size' in product else 'N/A' %}
                 {% set stock = stock[color][size] if color in stock and size in stock[color] else 0 %}
                 <tr>
                     <td>{{ product.nombre_producto }}</td>

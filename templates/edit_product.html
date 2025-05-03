@@ -38,9 +38,10 @@
         }
 
         input[type="text"],
-        input[type="file"],
-        textarea {
-            width: 200px;
+        input[type="number"],
+        textarea,
+        input[type="file"] {
+            width: 300px;
             background: #e0dede;
             padding: 10px;
             border: none;
@@ -51,7 +52,7 @@
         }
 
         textarea {
-            height: 80px;
+            height: 100px;
             resize: none;
         }
 
@@ -97,12 +98,21 @@
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
-    <form method="POST" action="{{ url_for('edit_product', product_id=product.product_id) }}" enctype="multipart/form-data">
-        <input type="text" name="nombre_producto" value="{{ product.nombre_producto }}" required>
-        <input type="text" name="product_id" value="{{ product.product_id }}" required>
-        <textarea name="descripcion" required>{{ product.descripcion }}</textarea>
-        <input type="number" name="valor_unitario" value="{{ product.valor_unitario }}" required min="0.01" step="0.01">
-        <input type="file" name="imagen" accept="image/*">
+    <form method="POST" enctype="multipart/form-data">
+        <label for="nombre_producto">Nombre del Producto:</label>
+        <input type="text" name="nombre_producto" id="nombre_producto" value="{{ product.nombre_producto }}" required>
+        <label for="product_id">ID del Producto:</label>
+        <input type="text" name="product_id" id="product_id" value="{{ product.product_id }}" required>
+        <label for="color">Color:</label>
+        <input type="text" name="color" id="color" value="{{ product.color }}" required>
+        <label for="size">Tamaño:</label>
+        <input type="text" name="size" id="size" value="{{ product.size }}" required>
+        <label for="descripcion">Descripción:</label>
+        <textarea name="descripcion" id="descripcion" required>{{ product.descripcion }}</textarea>
+        <label for="valor_unitario">Valor Unitario ($):</label>
+        <input type="number" name="valor_unitario" id="valor_unitario" value="{{ product.valor_unitario }}" min="0" step="0.01" required>
+        <label for="imagen">Nueva Imagen del Producto:</label>
+        <input type="file" name="imagen" id="imagen">
         <button type="submit">Guardar Cambios</button>
     </form>
     <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista</a>

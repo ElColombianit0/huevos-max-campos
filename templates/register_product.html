@@ -39,9 +39,9 @@
 
         input[type="text"],
         input[type="number"],
-        input[type="file"],
-        textarea {
-            width: 200px;
+        textarea,
+        input[type="file"] {
+            width: 300px;
             background: #e0dede;
             padding: 10px;
             border: none;
@@ -52,7 +52,7 @@
         }
 
         textarea {
-            height: 80px;
+            height: 100px;
             resize: none;
         }
 
@@ -98,13 +98,21 @@
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
-    <form method="POST" action="{{ url_for('register_product') }}" enctype="multipart/form-data">
-        <input type="text" name="nombre_producto" placeholder="Nombre del producto" required>
-        <input type="text" name="product_id" placeholder="ID del producto" required>
-        <textarea name="descripcion" placeholder="Descripción" required></textarea>
-        <input type="number" name="cantidad" placeholder="Cantidad" required min="0">
-        <input type="number" name="valor_unitario" placeholder="Valor unitario" required min="0.01" step="0.01">
-        <input type="file" name="imagen" accept="image/*">
+    <form method="POST" enctype="multipart/form-data">
+        <label for="nombre_producto">Nombre del Producto:</label>
+        <input type="text" name="nombre_producto" id="nombre_producto" placeholder="Ejemplo: Huevos Morado Extra" required>
+        <label for="product_id">ID del Producto:</label>
+        <input type="text" name="product_id" id="product_id" placeholder="ID único alfanumérico" required>
+        <label for="color">Color:</label>
+        <input type="text" name="color" id="color" placeholder="Ejemplo: Morado" required>
+        <label for="size">Tamaño:</label>
+        <input type="text" name="size" id="size" placeholder="Ejemplo: Extra" required>
+        <label for="descripcion">Descripción:</label>
+        <textarea name="descripcion" id="descripcion" placeholder="Descripción del producto" required></textarea>
+        <label for="valor_unitario">Valor Unitario ($):</label>
+        <input type="number" name="valor_unitario" id="valor_unitario" min="0" step="0.01" required>
+        <label for="imagen">Imagen del Producto:</label>
+        <input type="file" name="imagen" id="imagen">
         <button type="submit">Registrar Producto</button>
     </form>
     <a href="{{ url_for('index') }}" class="back-link">Volver al Inicio</a>

@@ -40,7 +40,6 @@
         select,
         input[type="number"] {
             width: 200px;
-            height: 40px;
             background: #e0dede;
             padding: 10px;
             border: none;
@@ -48,16 +47,6 @@
             border-radius: 5px;
             font-family: 'Jost', sans-serif;
             color: #333;
-        }
-
-        select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            cursor: pointer;
         }
 
         button {
@@ -102,8 +91,28 @@
             text-decoration: underline;
         }
     </style>
+    <script>
+        function updateSizes() {
+            var tipo = document.getElementById('tipo').value;
+            var tamanoSelect = document.getElementById('tamano');
+            tamanoSelect.innerHTML = '';
+            var products = {{ products|tojson }};
+            var sizes = new Set();
+            for (var i = 0; i < products.length; i++) {
+                if (products[i].color === tipo) {
+                    sizes.add(products[i].size);
+                }
+            }
+            sizes.forEach(function(size) {
+                var option = document.createElement('option');
+                option.value = size;
+                option.text = size;
+                tamanoSelect.appendChild(option);
+            });
+        }
+    </script>
 </head>
-<body>
+<body onload="updateSizes()">
     <h1>Registrar Stock</h1>
     {% if error %}
         <p class="error">{{ error }}</p>
@@ -111,29 +120,20 @@
     {% if success %}
         <p class="success">{{ success }}</p>
     {% endif %}
-    <form id="registerStockForm" method="POST" action="{{ url_for('register_stock') }}">
-        <select name="tipo" required>
-            <option value="">Tipo de huevo</option>
-            <option value="rojo">Rojo</option>
-            <option value="blanco">Blanco</option>
+    <form method="POST">
+        <label for="tipo">Tipo de Huevo:</label>
+        <select name="tipo" id="tipo" onchange="updateSizes()" required>
+            {% for color in colors %}
+                <option value="{{ color }}">{{ color | capitalize }}</option>
+            {% endfor %}
         </select>
-        <select name="tamano" required>
-            <option value="">Tamaño</option>
-            <option value="A">A</option>
-            <option value="AA">AA</option>
-            <option value="B">B</option>
-            <option value="EXTRA">EXTRA</option>
+        <label for="tamano">Tamaño:</label>
+        <select name="tamano" id="tamano" required>
         </select>
-        <input type="number" name="cantidad" placeholder="Cantidad" required min="0">
-        <button type="submit">Registrar</button>
+        <label for="cantidad">Cantidad:</label>
+        <input type="number" name="cantidad" id="cantidad" min="0" required>
+        <button type="submit">Registrar Stock</button>
     </form>
     <a href="{{ url_for('index') }}" class="back-link">Volver al Inicio</a>
-
-    <script>
-        document.getElementById('registerStockForm').addEventListener('submit', function(event) {
-            const formData = new FormData(this);
-            console.log('Datos enviados:', Object.fromEntries(formData));
-        });
-    </script>
 </body>
 </html>
