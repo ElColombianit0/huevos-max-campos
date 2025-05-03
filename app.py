@@ -14,6 +14,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
+from bson import ObjectId
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -102,6 +103,23 @@ def load_prices():
         prices_collection.insert_one(prices_doc)
     prices = {k: v for k, v in prices_doc.items() if k != "type" and k != "_id"}
     return prices
+
+# Función para convertir ObjectId a string y limpiar datos
+def serialize_document(doc):
+    if isinstance(doc, dict):
+        # Solo incluir los campos necesarios y excluir 'imagen'
+        cleaned_doc = {}
+        for key, value in doc.items():
+            if key == '_id':
+                cleaned_doc[key] = str(value)
+            elif key != 'imagen':  # Excluir explícitamente el campo 'imagen'
+                cleaned_doc[key] = serialize_document(value)
+        return cleaned_doc
+    elif isinstance(doc, list):
+        return [serialize_document(item) for item in doc]
+    elif isinstance(doc, ObjectId):
+        return str(doc)
+    return doc
 
 # Manejador de errores global
 @application.errorhandler(Exception)
@@ -485,12 +503,20 @@ def register_stock():
         return redirect(url_for('login'))
     if session.get('numero_documento') != '1234567890':
         return redirect(url_for('index'))
-    # Obtener productos y excluir el campo 'imagen' para evitar problemas con JSON
+    # Obtener productos y excluir el campo 'imagen'
     products = list(products_collection.find({}, {'imagen': 0}))
-    # Convertir ObjectId a string para que sea JSON-serializable
+    # Serializar documentos para convertir ObjectId y limpiar datos
+    products = [serialize_document(product) for product in products]
+    # Asegurarse de que solo los campos necesarios estén presentes
+    required_fields = ['nombre_producto', 'product_id', 'color', 'size', 'descripcion', 'valor_unitario']
+    cleaned_products = []
     for product in products:
-        product['_id'] = str(product['_id'])
-    colors = set(product['color'] for product in products if 'color' in product)
+        # Crear un nuevo diccionario con solo los campos necesarios
+        cleaned_product = {field: product.get(field, '') for field in required_fields}
+        cleaned_product['_id'] = product.get('_id', '')
+        cleaned_products.append(cleaned_product)
+    colors = set(product['color'] for product in cleaned_products if 'color' in product and product['color'])
+    logger.info(f"Productos procesados para la plantilla: {cleaned_products}")
     if request.method == 'POST':
         try:
             print("Datos recibidos:", request.form)
@@ -498,19 +524,19 @@ def register_stock():
             tamano = request.form.get('tamano').upper()
             cantidad_str = request.form.get('cantidad')
             if not tipo or tipo not in colors:
-                return render_template('register_stock.html', error="Tipo de huevo inválido", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="Tipo de huevo inválido", success=None, colors=colors, products=cleaned_products)
             # Validar que el tamaño exista para el tipo seleccionado
-            valid_sizes = set(product['size'] for product in products if product['color'] == tipo)
+            valid_sizes = set(product['size'] for product in cleaned_products if product['color'] == tipo)
             if not tamano or tamano not in valid_sizes:
-                return render_template('register_stock.html', error="Tamaño inválido", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="Tamaño inválido", success=None, colors=colors, products=cleaned_products)
             if not cantidad_str:
-                return render_template('register_stock.html', error="La cantidad no puede estar vacía", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="La cantidad no puede estar vacía", success=None, colors=colors, products=cleaned_products)
             try:
                 cantidad = int(cantidad_str)
             except ValueError:
-                return render_template('register_stock.html', error="Cantidad debe ser un número entero", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="Cantidad debe ser un número entero", success=None, colors=colors, products=cleaned_products)
             if cantidad < 0:
-                return render_template('register_stock.html', error="Cantidad no puede ser negativa", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="Cantidad no puede ser negativa", success=None, colors=colors, products=cleaned_products)
             stock_doc = stock_collection.find_one({"type": "huevos"})
             print("Documento de stock encontrado:", stock_doc)
             if not stock_doc:
@@ -523,7 +549,7 @@ def register_stock():
                 stock_doc = stock_collection.find_one({"type": "huevos"})
                 print("Documento de stock creado:", stock_doc)
             if tipo not in stock_doc or tamano not in stock_doc[tipo]:
-                return render_template('register_stock.html', error="Estructura de stock inválida", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="Estructura de stock inválida", success=None, colors=colors, products=cleaned_products)
             current_stock = stock_doc[tipo][tamano]
             new_stock = current_stock + cantidad
             result = stock_collection.update_one(
@@ -532,15 +558,15 @@ def register_stock():
             )
             print("Resultado de la actualización:", result.modified_count)
             if result.modified_count == 0:
-                return render_template('register_stock.html', error="No se pudo actualizar el stock, intenta de nuevo", success=None, colors=colors, products=products)
+                return render_template('register_stock.html', error="No se pudo actualizar el stock, intenta de nuevo", success=None, colors=colors, products=cleaned_products)
             updated_stock_doc = stock_collection.find_one({"type": "huevos"})
             updated_stock = updated_stock_doc[tipo][tamano]
             print("Stock actualizado:", updated_stock)
-            return render_template('register_stock.html', success=f"Se agregaron {cantidad} unidades al stock de huevos {tipo} tamaño {tamano}. Stock actual: {updated_stock}", error=None, colors=colors, products=products)
+            return render_template('register_stock.html', success=f"Se agregaron {cantidad} unidades al stock de huevos {tipo} tamaño {tamano}. Stock actual: {updated_stock}", error=None, colors=colors, products=cleaned_products)
         except Exception as e:
             logger.error(f"Error en /register_stock: {str(e)}")
-            return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None, colors=colors, products=products)
-    return render_template('register_stock.html', error=None, success=None, colors=colors, products=products)
+            return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None, colors=colors, products=cleaned_products)
+    return render_template('register_stock.html', error=None, success=None, colors=colors, products=cleaned_products)
 
 @application.route('/buy', methods=['GET', 'POST'])
 def buy():
