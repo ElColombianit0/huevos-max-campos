@@ -102,7 +102,7 @@
             let sizes = new Set();
             if (Array.isArray(products)) {
                 products.forEach(product => {
-                    if (product.color === tipo && product.size) {
+                    if (product.color === tipo && product.color in ['rojo', 'blanco'] && product.size in ['A', 'AA', 'B', 'EXTRA']) {
                         sizes.add(product.size);
                     }
                 });
