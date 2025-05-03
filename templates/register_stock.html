@@ -92,15 +92,13 @@
         }
     </style>
     <script>
-        // Definir products como una variable global
         const products = {{ products|tojson|safe }};
 
         function updateSizes() {
             const tipo = document.getElementById('tipo').value;
             const tamanoSelect = document.getElementById('tamano');
-            tamanoSelect.innerHTML = ''; // Limpiar opciones existentes
+            tamanoSelect.innerHTML = '';
 
-            // Validar que products sea un array
             let sizes = new Set();
             if (Array.isArray(products)) {
                 products.forEach(product => {
@@ -110,7 +108,6 @@
                 });
             } else {
                 console.error('Products no es un array válido:', products);
-                // Añadir opción de error
                 const errorOption = document.createElement('option');
                 errorOption.value = '';
                 errorOption.text = 'Error al cargar tamaños';
@@ -120,7 +117,6 @@
                 return;
             }
 
-            // Añadir opción por defecto
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.text = 'Seleccione un tamaño';
@@ -128,7 +124,6 @@
             defaultOption.selected = true;
             tamanoSelect.appendChild(defaultOption);
 
-            // Si no hay tamaños, mostrar mensaje
             if (sizes.size === 0) {
                 const option = document.createElement('option');
                 option.value = '';
@@ -136,7 +131,6 @@
                 option.disabled = true;
                 tamanoSelect.appendChild(option);
             } else {
-                // Añadir los tamaños disponibles
                 sizes.forEach(size => {
                     const option = document.createElement('option');
                     option.value = size;
@@ -146,14 +140,13 @@
             }
         }
 
-        // Ejecutar al cargar la página
         document.addEventListener('DOMContentLoaded', function() {
             try {
                 updateSizes();
             } catch (e) {
                 console.error('Error al actualizar tamaños:', e);
                 const tamanoSelect = document.getElementById('tamano');
-                tamanoSelect.innerHTML = ''; // Limpiar opciones
+                tamanoSelect.innerHTML = '';
                 const errorOption = document.createElement('option');
                 errorOption.value = '';
                 errorOption.text = 'Error al cargar tamaños';
