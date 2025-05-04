@@ -93,17 +93,16 @@
     </style>
     <script>
         const products = {{ products|tojson|safe }};
-        const validSizes = ['A', 'AA', 'B', 'EXTRA'];
 
         function updateSizes() {
-            const tipo = document.getElementById('tipo').value;
-            const tamanoSelect = document.getElementById('tamano');
-            tamanoSelect.innerHTML = '';
+            const nombreProducto = document.getElementById('nombre_producto').value;
+            const sizeSelect = document.getElementById('size');
+            sizeSelect.innerHTML = '';
 
             let sizes = new Set();
             if (Array.isArray(products)) {
                 products.forEach(product => {
-                    if (product.color === tipo && validSizes.includes(product.size)) {
+                    if (product.nombre_producto === nombreProducto) {
                         sizes.add(product.size);
                     }
                 });
@@ -114,20 +113,20 @@
             defaultOption.text = 'Seleccione un tamaño';
             defaultOption.disabled = true;
             defaultOption.selected = true;
-            tamanoSelect.appendChild(defaultOption);
+            sizeSelect.appendChild(defaultOption);
 
             if (sizes.size === 0) {
                 const option = document.createElement('option');
                 option.value = '';
                 option.text = 'No hay tamaños disponibles';
                 option.disabled = true;
-                tamanoSelect.appendChild(option);
+                sizeSelect.appendChild(option);
             } else {
                 Array.from(sizes).sort().forEach(size => {
                     const option = document.createElement('option');
                     option.value = size;
                     option.text = size;
-                    tamanoSelect.appendChild(option);
+                    sizeSelect.appendChild(option);
                 });
             }
         }
@@ -146,15 +145,15 @@
         <p class="success">{{ success }}</p>
     {% endif %}
     <form method="POST">
-        <label for="tipo">Tipo de Huevo:</label>
-        <select name="tipo" id="tipo" onchange="updateSizes()" required>
-            <option value="" disabled selected>Seleccione un tipo</option>
-            {% for color in colors %}
-                <option value="{{ color }}">{{ color | capitalize }}</option>
+        <label for="nombre_producto">Producto:</label>
+        <select name="nombre_producto" id="nombre_producto" onchange="updateSizes()" required>
+            <option value="" disabled selected>Seleccione un producto</option>
+            {% for name in product_names %}
+                <option value="{{ name }}">{{ name }}</option>
             {% endfor %}
         </select>
-        <label for="tamano">Tamaño:</label>
-        <select name="tamano" id="tamano" required>
+        <label for="size">Tamaño:</label>
+        <select name="size" id="size" required>
             <option value="" disabled selected>Seleccione un tamaño</option>
         </select>
         <label for="cantidad">Cantidad:</label>

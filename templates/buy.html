@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprar - Huevos Max Campos</title>
+    <title>Comprar Producto - Huevos Max Campos</title>
     <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
     <style>
         body {
@@ -85,28 +85,66 @@
             text-decoration: underline;
         }
     </style>
+    <script>
+        function updateUnitOptions() {
+            const tipo = "{{ tipo }}";
+            const products = {{ products|tojson|safe }};
+            const product = products.find(p => p.color === tipo && p.size === "{{ tamano }}");
+            const isHuevo = product && product.nombre_producto.toLowerCase() === 'huevo';
+            const unitSelect = document.getElementById('unidad');
+            unitSelect.innerHTML = '';
+
+            if (isHuevo) {
+                {% if tipo_persona == 'juridica' %}
+                    const option = document.createElement('option');
+                    option.value = 'cubeta';
+                    option.text = 'Cubeta';
+                    option.selected = true;
+                    unitSelect.appendChild(option);
+                {% else %}
+                    const option1 = document.createElement('option');
+                    option1.value = 'cubeta';
+                    option1.text = 'Cubeta';
+                    unitSelect.appendChild(option1);
+
+                    const option2 = document.createElement('option');
+                    option2.value = 'docena';
+                    option2.text = 'Docena';
+                    unitSelect.appendChild(option2);
+                {% endif %}
+            } else {
+                const option1 = document.createElement('option');
+                option1.value = 'unidad';
+                option1.text = 'Unidad';
+                unitSelect.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = 'docena';
+                option2.text = 'Docena';
+                unitSelect.appendChild(option2);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUnitOptions();
+        });
+    </script>
 </head>
 <body>
     <h1>Comprar Producto</h1>
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
-    <form method="POST" action="{{ url_for('buy') }}">
+    <form method="POST">
         <input type="hidden" name="tipo" value="{{ tipo }}">
         <input type="hidden" name="tamano" value="{{ tamano }}">
         <label for="cantidad">Cantidad:</label>
         <input type="number" name="cantidad" id="cantidad" min="1" required>
-        {% if tipo_persona == 'natural' %}
-            <label for="unidad">Unidad:</label>
-            <select name="unidad" id="unidad">
-                <option value="cubeta">Cubeta</option>
-                <option value="docena">Docena</option>
-            </select>
-        {% else %}
-            <input type="hidden" name="unidad" value="cubeta">
-        {% endif %}
-        <button type="submit">Confirmar Compra</button>
+        <label for="unidad">Unidad:</label>
+        <select name="unidad" id="unidad" required>
+        </select>
+        <button type="submit">Comprar</button>
     </form>
-    <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista</a>
+    <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista de Productos</a>
 </body>
 </html>
