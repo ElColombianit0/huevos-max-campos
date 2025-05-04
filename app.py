@@ -478,9 +478,9 @@ def buy():
                 unidades_totales = cantidad * 30 if unidad == 'cubeta' else cantidad * 12
             else:
                 unidad = request.form.get('unidad', 'unidad')
-                if unidad not in ['unidad', 'docena']:
-                    return render_template('buy.html', error="Unidad inválida para este producto", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
-                unidades_totales = cantidad if unidad == 'unidad' else cantidad * 12
+                if unidad != 'unidad':  # Solo se permite 'unidad' para productos que no son huevos
+                    return render_template('buy.html', error="Productos que no son huevos solo se pueden comprar por unidad", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
+                unidades_totales = cantidad
 
             if cantidad <= 0:
                 return render_template('buy.html', error="Cantidad debe ser mayor a cero", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
@@ -497,12 +497,8 @@ def buy():
                 )
 
             precio_unitario = product['valor_unitario']
-            if is_huevo:
-                if unidad == 'docena':
-                    precio_unitario = (precio_unitario / 30) * 12
-            else:
-                if unidad == 'docena':
-                    precio_unitario = (precio_unitario / 1) * 12
+            if is_huevo and unidad == 'docena':
+                precio_unitario = (precio_unitario / 30) * 12
 
             subtotal = precio_unitario * cantidad
             iva = subtotal * 0.05
@@ -581,11 +577,7 @@ def generate_invoice(nombre_producto, tipo, tamano, cantidad, unidad):
             total_unidades = cantidad * 12
             precio_unitario = (precio_unitario / 30) * 12
     else:
-        if unidad == 'unidad':
-            total_unidades = cantidad
-        else:
-            total_unidades = cantidad * 12
-            precio_unitario = (precio_unitario / 1) * 12
+        total_unidades = cantidad
 
     subtotal = precio_unitario * cantidad
     iva = subtotal * 0.05
