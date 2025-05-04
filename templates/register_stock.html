@@ -93,6 +93,7 @@
     </style>
     <script>
         const products = {{ products|tojson|safe }};
+        const validSizes = ['A', 'AA', 'B', 'EXTRA'];
 
         function updateSizes() {
             const tipo = document.getElementById('tipo').value;
@@ -102,19 +103,10 @@
             let sizes = new Set();
             if (Array.isArray(products)) {
                 products.forEach(product => {
-                    if (product.color === tipo && product.color in ['rojo', 'blanco'] && product.size in ['A', 'AA', 'B', 'EXTRA']) {
+                    if (product.color === tipo && validSizes.includes(product.size)) {
                         sizes.add(product.size);
                     }
                 });
-            } else {
-                console.error('Products no es un array válido:', products);
-                const errorOption = document.createElement('option');
-                errorOption.value = '';
-                errorOption.text = 'Error al cargar tamaños';
-                errorOption.disabled = true;
-                errorOption.selected = true;
-                tamanoSelect.appendChild(errorOption);
-                return;
             }
 
             const defaultOption = document.createElement('option');
@@ -131,7 +123,7 @@
                 option.disabled = true;
                 tamanoSelect.appendChild(option);
             } else {
-                sizes.forEach(size => {
+                Array.from(sizes).sort().forEach(size => {
                     const option = document.createElement('option');
                     option.value = size;
                     option.text = size;
@@ -141,19 +133,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            try {
-                updateSizes();
-            } catch (e) {
-                console.error('Error al actualizar tamaños:', e);
-                const tamanoSelect = document.getElementById('tamano');
-                tamanoSelect.innerHTML = '';
-                const errorOption = document.createElement('option');
-                errorOption.value = '';
-                errorOption.text = 'Error al cargar tamaños';
-                errorOption.disabled = true;
-                errorOption.selected = true;
-                tamanoSelect.appendChild(errorOption);
-            }
+            updateSizes();
         });
     </script>
 </head>
