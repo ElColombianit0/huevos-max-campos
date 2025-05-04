@@ -235,8 +235,8 @@ def register_product():
                 return render_template('register_product.html', error="El ID del producto ya está registrado")
             if not color or not re.match(r'^[a-zA-Z\s]+$', color):
                 return render_template('register_product.html', error="El color solo puede contener letras y espacios")
-            if not size or not re.match(r'^[a-zA-Z0-9]+$', size):
-                return render_template('register_product.html', error="El tamaño debe ser alfanumérico")
+            if not size or not re.match(r'^[a-zA-Z0-9\s]+$', size):
+                return render_template('register_product.html', error="El tamaño debe ser alfanumérico (letras, números o espacios)")
             if not descripcion:
                 return render_template('register_product.html', error="La descripción no puede estar vacía")
             if valor_unitario <= 0:
@@ -305,8 +305,8 @@ def edit_product(product_id):
                 return render_template('edit_product.html', product=product, error="El ID del producto ya está registrado")
             if not color or not re.match(r'^[a-zA-Z\s]+$', color):
                 return render_template('edit_product.html', product=product, error="El color solo puede contener letras y espacios")
-            if not size or not re.match(r'^[a-zA-Z0-9]+$', size):
-                return render_template('edit_product.html', product=product, error="El tamaño debe ser alfanumérico")
+            if not size or not re.match(r'^[a-zA-Z0-9\s]+$', size):
+                return render_template('edit_product.html', product=product, error="El tamaño debe ser alfanumérico (letras, números o espacios)")
             if not descripcion:
                 return render_template('edit_product.html', product=product, error="La descripción no puede estar vacía")
             if valor_unitario <= 0:
@@ -449,6 +449,10 @@ def buy():
         return redirect(url_for('index'))
     tipo_persona = session.get('tipo_persona')
     
+    # Obtener la lista de productos para la plantilla
+    products = list(products_collection.find({}, {'imagen': 0}))
+    products = [serialize_document(product) for product in products]
+    
     tipo = request.args.get('tipo')
     tamano = request.args.get('tamano')
     
@@ -459,10 +463,9 @@ def buy():
             tamano = request.form.get('tamano')
             cantidad = int(request.form.get('cantidad'))
 
-            products = list(products_collection.find())
             product = next((p for p in products if p.get('color') == tipo and p.get('size') == tamano), None)
             if not product:
-                return render_template('buy.html', error="Producto no encontrado", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+                return render_template('buy.html', error="Producto no encontrado", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
 
             is_huevo = product['nombre_producto'].lower() == 'huevo'
             if is_huevo:
@@ -471,20 +474,20 @@ def buy():
                 else:
                     unidad = request.form.get('unidad', 'cubeta')
                 if unidad not in ['cubeta', 'docena'] and tipo_persona == 'natural':
-                    return render_template('buy.html', error="Unidad inválida", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+                    return render_template('buy.html', error="Unidad inválida", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
                 unidades_totales = cantidad * 30 if unidad == 'cubeta' else cantidad * 12
             else:
                 unidad = request.form.get('unidad', 'unidad')
                 if unidad not in ['unidad', 'docena']:
-                    return render_template('buy.html', error="Unidad inválida para este producto", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+                    return render_template('buy.html', error="Unidad inválida para este producto", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
                 unidades_totales = cantidad if unidad == 'unidad' else cantidad * 12
 
             if cantidad <= 0:
-                return render_template('buy.html', error="Cantidad debe ser mayor a cero", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+                return render_template('buy.html', error="Cantidad debe ser mayor a cero", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
 
             stock_doc = stock_collection.find_one({"nombre_producto": product['nombre_producto'], "size": tamano})
             if stock_doc and stock_doc['cantidad'] < unidades_totales:
-                return render_template('buy.html', error="No hay suficiente stock de este producto", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+                return render_template('buy.html', error="No hay suficiente stock de este producto", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
 
             if stock_doc:
                 new_stock = stock_doc['cantidad'] - unidades_totales
@@ -507,7 +510,7 @@ def buy():
 
             user = users_collection.find_one({"correo": session.get('correo')})
             if not user:
-                return render_template('buy.html', error="Usuario no encontrado", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+                return render_template('buy.html', error="Usuario no encontrado", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
             nombre_cliente = user['nombre_completo']
 
             purchase = {
@@ -529,15 +532,15 @@ def buy():
             )
         except KeyError as e:
             logger.error(f"Error de clave faltante: {str(e)}")
-            return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+            return render_template('buy.html', error="Faltan campos en el formulario", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
         except ValueError as e:
             logger.error(f"Error de valor inválido: {str(e)}")
-            return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+            return render_template('buy.html', error="Cantidad debe ser un número válido", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
         except Exception as e:
             logger.error(f"Error al procesar la compra: {str(e)}")
-            return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano)
+            return render_template('buy.html', error=f"Error al procesar la compra: {str(e)}", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
     elif request.method == 'GET' and tipo and tamano:
-        return render_template('buy.html', tipo_persona=tipo_persona, error=None, tipo=tipo, tamano=tamano)
+        return render_template('buy.html', tipo_persona=tipo_persona, error=None, tipo=tipo, tamano=tamano, products=products)
     else:
         return redirect(url_for('list_products'))
 

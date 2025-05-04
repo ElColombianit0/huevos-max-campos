@@ -39,9 +39,9 @@
 
         input[type="text"],
         input[type="number"],
-        textarea,
-        input[type="file"] {
-            width: 300px;
+        input[type="file"],
+        textarea {
+            width: 200px;
             background: #e0dede;
             padding: 10px;
             border: none;
@@ -52,8 +52,7 @@
         }
 
         textarea {
-            height: 100px;
-            resize: none;
+            resize: vertical;
         }
 
         button {
@@ -105,16 +104,16 @@
         <input type="text" name="product_id" id="product_id" value="{{ product.product_id }}" required>
         <label for="color">Color:</label>
         <input type="text" name="color" id="color" value="{{ product.color }}" required>
-        <label for="size">Tamaño:</label>
+        <label for="size">Tamaño (letras, números o espacios, ej. A, AA, Extra Large):</label>
         <input type="text" name="size" id="size" value="{{ product.size }}" required>
         <label for="descripcion">Descripción:</label>
         <textarea name="descripcion" id="descripcion" required>{{ product.descripcion }}</textarea>
-        <label for="valor_unitario">Valor Unitario ($):</label>
-        <input type="number" name="valor_unitario" id="valor_unitario" value="{{ product.valor_unitario }}" min="0" step="0.01" required>
-        <label for="imagen">Nueva Imagen del Producto:</label>
+        <label for="valor_unitario">Valor Unitario:</label>
+        <input type="number" name="valor_unitario" id="valor_unitario" step="0.01" min="0" value="{{ product.valor_unitario }}" required>
+        <label for="imagen">Imagen (dejar vacío para mantener la actual):</label>
         <input type="file" name="imagen" id="imagen">
-        <button type="submit">Guardar Cambios</button>
+        <button type="submit">Actualizar Producto</button>
     </form>
-    <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista</a>
+    <a href="{{ url_for('list_products') }}" class="back-link">Volver a la Lista de Productos</a>
 </body>
 </html>
