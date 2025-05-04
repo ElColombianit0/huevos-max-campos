@@ -92,7 +92,7 @@
             const product = products.find(p => p.color === tipo && p.size === "{{ tamano }}");
             const isHuevo = product && product.nombre_producto.toLowerCase() === 'huevo';
             const unitSelect = document.getElementById('unidad');
-            unitSelect.innerHTML = '';
+            unitSelect.innerHTML = ''; // Limpiar todas las opciones existentes
 
             if (isHuevo) {
                 {% if tipo_persona == 'juridica' %}
@@ -113,15 +113,11 @@
                     unitSelect.appendChild(option2);
                 {% endif %}
             } else {
-                const option1 = document.createElement('option');
-                option1.value = 'unidad';
-                option1.text = 'Unidad';
-                unitSelect.appendChild(option1);
-
-                const option2 = document.createElement('option');
-                option2.value = 'docena';
-                option2.text = 'Docena';
-                unitSelect.appendChild(option2);
+                const option = document.createElement('option');
+                option.value = 'unidad';
+                option.text = 'Unidad';
+                option.selected = true;
+                unitSelect.appendChild(option);
             }
         }
 
