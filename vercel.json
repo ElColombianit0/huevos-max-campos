@@ -19,5 +19,11 @@
   ],
   "env": {
     "PYTHON_VERSION": "3.9"
+  },
+  "functions": {
+    "api/app.py": {
+      "runtime": "python3.9",
+      "handler": "gunicorn -w 1 -k uvicorn.workers.UvicornWorker api.app:app"
+    }
   }
 }
