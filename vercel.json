@@ -19,10 +19,5 @@
   ],
   "env": {
     "PYTHON_VERSION": "3.9"
-  },
-  "functions": {
-    "api/app.py": {
-      "handler": "app.app"
-    }
   }
 }
