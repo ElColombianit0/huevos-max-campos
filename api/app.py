@@ -18,6 +18,7 @@ import requests
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from dotenv import load_dotenv
+from flask_session import Session  # Importar flask-session
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -29,10 +30,15 @@ logger = logging.getLogger(__name__)
 # Crear la aplicación Flask
 application = Flask(__name__, template_folder='templates')
 
-# Configuración de sesiones (usar cookies)
+# Configuración de sesiones con flask-session y MongoDB
 application.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey123')
+application.config['SESSION_TYPE'] = 'mongodb'  # Usar MongoDB para almacenar sesiones
+application.config['SESSION_MONGODB'] = MongoClient(os.getenv('MONGO_URI', f"mongodb+srv://{urllib.parse.quote_plus('sergio')}:{urllib.parse.quote_plus('47iV@E9Jh8Fh9Fs')}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority"))
+application.config['SESSION_MONGODB_DB'] = 'huevos_max_campos'
+application.config['SESSION_MONGODB_COLLECT'] = 'sessions'
 application.config['PERMANENT_SESSION_LIFETIME'] = 1800
 application.config['SESSION_PERMANENT'] = False
+Session(application)  # Inicializar flask-session
 
 # Configuración de Google OAuth
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -57,6 +63,7 @@ except Exception as e:
     logger.error(f"Error al conectar a MongoDB: {e}")
     raise Exception("No se pudo conectar a MongoDB")
 
+# Resto del código (sin cambios)...
 # Eliminar índice obsoleto 'username_1' si existe
 try:
     users_collection.drop_index("username_1")
