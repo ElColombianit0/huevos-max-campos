@@ -6,7 +6,7 @@
         "use": "@vercel/python",
         "config": {
           "maxLambdaSize": "15mb",
-          "includeFiles": ["requirements.txt"]
+          "buildCommand": "pip install -r requirements.txt"
         }
       }
     ],
@@ -15,5 +15,8 @@
         "src": "/(.*)",
         "dest": "app.py"
       }
-    ]
+    ],
+    "env": {
+      "PYTHON_VERSION": "3.9"
+    }
   }
