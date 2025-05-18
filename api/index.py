@@ -1,4 +1,4 @@
-from app import application
+from api.app import application
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.wrappers import Response
 

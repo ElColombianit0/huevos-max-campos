@@ -1,4 +1,4 @@
-from app import application
+from api.app import application
 
 # Vercel espera que la variable se llame 'app'
 app = application
