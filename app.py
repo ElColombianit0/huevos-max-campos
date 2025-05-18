@@ -15,6 +15,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
 from bson import ObjectId
+import requests
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +30,10 @@ application = Flask(__name__, template_folder='templates')
 application.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey123')
 application.config['PERMANENT_SESSION_LIFETIME'] = 1800
 application.config['SESSION_PERMANENT'] = False
+
+# Configuración de Google OAuth
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
 # Configuración de MongoDB
 mongo_uri = os.getenv('MONGO_URI', f"mongodb+srv://{urllib.parse.quote_plus('sergio')}:{urllib.parse.quote_plus('47iV@E9Jh8Fh9Fs')}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority")
@@ -112,6 +119,76 @@ def login():
         logger.info(f"Usuario {correo} ha iniciado sesión correctamente.")
         return redirect(url_for('index'))
     return render_template('login.html', error=None, signup_error=None)
+
+@application.route('/google-login', methods=['POST'])
+def google_login():
+    try:
+        token = request.form.get('id_token')
+        if not token:
+            return jsonify({"error": "No se proporcionó el token de Google"}), 400
+
+        # Verificar el token con Google
+        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), GOOGLE_CLIENT_ID)
+
+        # Obtener el correo del usuario
+        email = idinfo.get('email')
+        if not email:
+            return jsonify({"error": "No se pudo obtener el correo del usuario"}), 400
+
+        # Verificar si el usuario ya existe
+        user = users_collection.find_one({"correo": email})
+        if user:
+            # Si el usuario ya existe, iniciar sesión
+            session['logged_in'] = True
+            session['correo'] = email
+            session['tipo_persona'] = user['tipo_persona']
+            session['numero_documento'] = user.get('numero_documento', '')
+            return jsonify({"success": True, "redirect": url_for('index')})
+
+        # Si el usuario no existe, guardar el correo en la sesión y redirigir a la página para establecer contraseña
+        session['google_email'] = email
+        return jsonify({"success": True, "redirect": url_for('set_google_password')})
+
+    except ValueError as e:
+        logger.error(f"Error al verificar el token de Google: {str(e)}")
+        return jsonify({"error": "Token de Google inválido"}), 400
+    except Exception as e:
+        logger.error(f"Error inesperado en google-login: {str(e)}")
+        return jsonify({"error": "Error al procesar el inicio de sesión con Google"}), 500
+
+@application.route('/set-google-password', methods=['GET', 'POST'])
+def set_google_password():
+    if 'google_email' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if not password:
+            return render_template('set_google_password.html', error="La contraseña no puede estar vacía")
+
+        email = session.pop('google_email')
+        hashed_password = generate_password_hash(password)
+
+        # Registrar el usuario como persona natural con datos vacíos
+        users_collection.insert_one({
+            "tipo_documento": "cedula",
+            "numero_documento": "",
+            "nombre_completo": "",
+            "numero_contacto": "",
+            "correo": email,
+            "tipo_persona": "natural",
+            "password": hashed_password
+        })
+
+        # Iniciar sesión
+        session['logged_in'] = True
+        session['correo'] = email
+        session['tipo_persona'] = "natural"
+        session['numero_documento'] = ""
+        logger.info(f"Usuario {email} registrado con Google y contraseña establecida.")
+        return redirect(url_for('index'))
+
+    return render_template('set_google_password.html', error=None)
 
 @application.route('/register', methods=['POST'])
 def register_user():
@@ -376,6 +453,7 @@ def logout():
     session.pop('correo', None)
     session.pop('tipo_persona', None)
     session.pop('numero_documento', None)
+    session.pop('google_email', None)
     return redirect(url_for('login'))
 
 @application.route('/')
@@ -478,7 +556,7 @@ def buy():
                 unidades_totales = cantidad * 30 if unidad == 'cubeta' else cantidad * 12
             else:
                 unidad = request.form.get('unidad', 'unidad')
-                if unidad != 'unidad':  # Solo se permite 'unidad' para productos que no son huevos
+                if unidad != 'unidad':
                     return render_template('buy.html', error="Productos que no son huevos solo se pueden comprar por unidad", tipo_persona=tipo_persona, tipo=tipo, tamano=tamano, products=products)
                 unidades_totales = cantidad
 
