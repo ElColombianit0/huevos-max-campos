@@ -18,6 +18,10 @@ from bson import ObjectId
 import requests
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +38,10 @@ application.config['SESSION_PERMANENT'] = False
 # Configuración de Google OAuth
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    logger.error("GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET no están configurados")
+    raise ValueError("Faltan configuraciones de Google OAuth")
 
 # Configuración de MongoDB
 mongo_uri = os.getenv('MONGO_URI', f"mongodb+srv://{urllib.parse.quote_plus('sergio')}:{urllib.parse.quote_plus('47iV@E9Jh8Fh9Fs')}@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority")
@@ -287,6 +295,7 @@ def delete_profile():
     session.pop('correo', None)
     session.pop('tipo_persona', None)
     session.pop('numero_documento', None)
+    session.pop('google_email', None)
     return redirect(url_for('login'))
 
 @application.route('/register_product', methods=['GET', 'POST'])
