@@ -1,3 +1,4 @@
+from tkinter import Canvas
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 import json
 import os
@@ -695,7 +696,7 @@ def generate_invoice(nombre_producto, tipo, tamano, cantidad, unidad):
     /_____\      
     """
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
+    c = Canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     c.setFont("Courier", 10)
     gallina_lines = gallina.split('\n')
