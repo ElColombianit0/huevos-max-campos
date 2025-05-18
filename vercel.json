@@ -1,23 +1,23 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "api/app.py",
-        "use": "@vercel/python",
-        "config": {
-          "maxLambdaSize": "15mb",
-          "buildCommand": "pip install -r requirements.txt",
-          "includeFiles": ["requirements.txt"]
-        }
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/app.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "buildCommand": "pip install -r requirements.txt",
+        "includeFiles": ["requirements.txt"]
       }
-    ],
-    "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "api/app.py"
-      }
-    ],
-    "env": {
-      "PYTHON_VERSION": "3.9"  # Usa 3.9 en lugar de 3.13 para mayor compatibilidad
     }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/app.py"
+    }
+  ],
+  "env": {
+    "PYTHON_VERSION": "3.9"
   }
+}
