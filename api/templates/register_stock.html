@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Stock - Huevos Max Campos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Jost', sans-serif;
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: #24243e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 5px 20px 50px #000;
+        }
+
+        select,
+        input[type="number"] {
+            width: 200px;
+            background: #e0dede;
+            padding: 10px;
+            border: none;
+            outline: none;
+            border-radius: 5px;
+            font-family: 'Jost', sans-serif;
+            color: #333;
+        }
+
+        button {
+            width: 200px;
+            height: 40px;
+            color: #fff;
+            background: #573b8a;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            transition: .2s ease-in;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #6d44b8;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .success {
+            color: green;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            margin-top: 20px;
+            color: #6d44b8;
+            font-size: 0.9em;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            color: #573b8a;
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        const products = {{ products|tojson|safe }};
+
+        function updateSizes() {
+            const nombreProducto = document.getElementById('nombre_producto').value;
+            const sizeSelect = document.getElementById('size');
+            sizeSelect.innerHTML = '';
+
+            let sizes = new Set();
+            if (Array.isArray(products)) {
+                products.forEach(product => {
+                    if (product.nombre_producto === nombreProducto) {
+                        sizes.add(product.size);
+                    }
+                });
+            }
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.text = 'Seleccione un tamaño';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            sizeSelect.appendChild(defaultOption);
+
+            if (sizes.size === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.text = 'No hay tamaños disponibles';
+                option.disabled = true;
+                sizeSelect.appendChild(option);
+            } else {
+                Array.from(sizes).sort().forEach(size => {
+                    const option = document.createElement('option');
+                    option.value = size;
+                    option.text = size;
+                    sizeSelect.appendChild(option);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSizes();
+        });
+    </script>
+</head>
+<body>
+    <h1>Registrar Stock</h1>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    {% if success %}
+        <p class="success">{{ success }}</p>
+    {% endif %}
+    <form method="POST">
+        <label for="nombre_producto">Producto:</label>
+        <select name="nombre_producto" id="nombre_producto" onchange="updateSizes()" required>
+            <option value="" disabled selected>Seleccione un producto</option>
+            {% for name in product_names %}
+                <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+        <label for="size">Tamaño:</label>
+        <select name="size" id="size" required>
+            <option value="" disabled selected>Seleccione un tamaño</option>
+        </select>
+        <label for="cantidad">Cantidad:</label>
+        <input type="number" name="cantidad" id="cantidad" min="0" required>
+        <button type="submit">Registrar Stock</button>
+    </form>
+    <a href="{{ url_for('index') }}" class="back-link">Volver al Inicio</a>
+</body>
+</html>
