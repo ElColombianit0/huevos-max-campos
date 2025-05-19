@@ -143,14 +143,13 @@
             </select>
             <div class="photo-upload">
                 <label for="foto_perfil">Subir Foto de Perfil (desde PC/Teléfono):</label>
-                <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*">
+                <input type="file" id="foto_perfil_file" name="foto_perfil" accept="image/*">
             </div>
             <div class="camera-option">
                 <label>Tomar Foto con Cámara:</label>
                 <video id="video" autoplay></video>
                 <button type="button" onclick="capturePhoto()">Capturar Foto</button>
                 <canvas id="canvas" style="display:none;"></canvas>
-                <input type="hidden" id="foto_capturada" name="foto_perfil">
             </div>
             <button type="submit">Guardar Cambios</button>
         </form>
@@ -169,7 +168,7 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const context = canvas.getContext('2d');
-        const fotoCapturada = document.getElementById('foto_capturada');
+        const fotoPerfilFile = document.getElementById('foto_perfil_file');
 
         // Acceder a la cámara
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -183,14 +182,18 @@
                 });
         }
 
-        // Capturar foto
+        // Capturar foto y crear un archivo Blob
         function capturePhoto() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            fotoCapturada.value = dataUrl.split(',')[1]; // Guardar solo la parte base64
-            alert("Foto capturada con éxito. Guarda los cambios para aplicarla.");
+            canvas.toBlob(function(blob) {
+                const file = new File([blob], 'foto_capturada.jpg', { type: 'image/jpeg' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fotoPerfilFile.files = dataTransfer.files;
+                alert("Foto capturada con éxito. Guarda los cambios para aplicarla.");
+            }, 'image/jpeg');
         }
     </script>
 </body>
