@@ -226,10 +226,14 @@ def set_google_password():
             hashed_password = generate_password_hash(password)
             logger.debug("Contraseña hasheada exitosamente")
 
+            # Generar un número de documento único basado en el correo
+            unique_num_doc = f"GOOGLE_{hash(email) % 1000000:06d}"
+            logger.debug(f"Generando numero_documento único: {unique_num_doc}")
+
             logger.debug("Insertando nuevo usuario en la base de datos...")
             users_collection.insert_one({
                 "tipo_documento": "cedula",
-                "numero_documento": "",
+                "numero_documento": unique_num_doc,
                 "nombre_completo": "",
                 "numero_contacto": "",
                 "correo": email,
@@ -241,7 +245,7 @@ def set_google_password():
             session['logged_in'] = True
             session['correo'] = email
             session['tipo_persona'] = "natural"
-            session['numero_documento'] = ""
+            session['numero_documento'] = unique_num_doc
             logger.info(f"Usuario {email} registrado con Google y contraseña establecida.")
             return redirect(url_for('index'))
 
@@ -432,7 +436,7 @@ def edit_product(product_id):
             if not nombre_producto or not re.match(r'^[a-zA-Z\s]+$', nombre_producto):
                 logger.warning(f"Nombre de producto inválido: {nombre_producto}")
                 return render_template('edit_product.html', product=product, error="El nombre del producto solo puede contener letras y espacios")
-            if not nuevo_product_id or not re.match(r'^[a-zAZ0-9]+$', nuevo_product_id):
+            if not nuevo_product_id or not re.match(r'^[a-zA-Z0-9]+$', nuevo_product_id):
                 logger.warning(f"Nuevo ID de producto inválido: {nuevo_product_id}")
                 return render_template('edit_product.html', product=product, error="El ID del producto debe ser alfanumérico")
             if nuevo_product_id != product_id and products_collection.find_one({"product_id": nuevo_product_id}):
