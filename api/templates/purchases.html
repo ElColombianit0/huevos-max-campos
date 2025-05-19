@@ -187,7 +187,7 @@
                         {% for purchase in purchases %}
                             <tr>
                                 <td>{{ purchase.nombre_cliente }}</td>
-                                <td>{{ purchase.fecha.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>{{ purchase.fecha }}</td> <!-- Usar directamente el valor serializado -->
                                 <td>{{ purchase.detalle }}</td>
                                 <td>${{ "%.2f" % purchase.total }}</td>
                             </tr>
