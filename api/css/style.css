@@ -157,3 +157,30 @@ button:hover {
     color: #573b8a;
     text-decoration: underline;
 }
+/* Estilos para error.html */
+.error-container {
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+
+.error-container h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+}
+
+.error-container p {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+}
+
+.error-container a {
+    color: #6d44b8;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.error-container a:hover {
+    color: #573b8a;
+    text-decoration: underline;
+}

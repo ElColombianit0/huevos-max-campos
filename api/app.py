@@ -14,28 +14,45 @@ from google.auth.transport import requests as google_requests
 from dotenv import load_dotenv
 from flask_session import Session
 
-# Configurar logging más detallado
+# Configurar logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Cargar variables de entorno desde .env
-load_dotenv()
-
 # Crear la aplicación Flask
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# Configurar SECRET_KEY antes de cualquier cosa
+app.config['SECRET_KEY'] = 'supersecretkey123'  # Valor fijo para pruebas
+logger.debug(f"SECRET_KEY configurado en app: {app.config['SECRET_KEY']}")
+
+# Intentar cargar .env para otras variables
+logger.debug("Intentando cargar .env...")
+load_dotenv()
+logger.debug(f"Variables de entorno cargadas. SECRET_KEY desde .env: {os.getenv('SECRET_KEY')}")
 
 # Configuración de sesiones con flask-session y MongoDB
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'supersecretkey123')
 try:
-    mongo_uri = os.getenv('MONGO_URI')
+    mongo_uri = os.getenv('MONGO_URI', 'mongodb+srv://sergio:47iV%40E9Jh8Fh9Fs@huevosmaxcluster.wbo7aak.mongodb.net/huevos_max_campos?retryWrites=true&w=majority')
     if not mongo_uri:
         logger.error("MONGO_URI no está configurado en las variables de entorno")
         raise ValueError("MONGO_URI no está configurado")
-    app.config['SESSION_MONGODB'] = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
+    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
+    # Probar la conexión
+    client.server_info()
+    logger.debug("Conexión a MongoDB exitosa")
+    db = client['huevos_max_campos']
+    users_collection = db.users
+    products_collection = db.products
+    stock_collection = db.stock
+    purchases_collection = db.purchases
+    app.config['SESSION_TYPE'] = 'mongodb'
+    app.config['SESSION_MONGODB'] = client
     app.config['SESSION_MONGODB_DB'] = 'huevos_max_campos'
     app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
     app.config['PERMANENT_SESSION_LIFETIME'] = 1800
     app.config['SESSION_PERMANENT'] = False
+    app.config['SESSION_COOKIE_SECURE'] = False  # Para pruebas locales
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
     Session(app)
     logger.info("Configuración de sesiones con MongoDB completada")
 except Exception as e:
@@ -43,79 +60,22 @@ except Exception as e:
     raise Exception(f"No se pudo configurar las sesiones: {str(e)}")
 
 # Configuración de Google OAuth
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '1068505250151-6k26is5lruk6dqc5msei0fpk7mr31q2j.apps.googleusercontent.com')
+app.config['GOOGLE_CLIENT_SECRET'] = os.getenv('GOOGLE_CLIENT_SECRET', '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')
 
-if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-    logger.error("GOOGLE_CLIENT_ID o GOOGLE_CLIENT_SECRET no están configurados")
-    raise ValueError("Faltan configuraciones de Google OAuth")
-
-# Configuración de MongoDB
-try:
-    client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
-    client.server_info()
-    db = client['huevos_max_campos']
-    users_collection = db['users']
-    stock_collection = db['stock']
-    products_collection = db['products']
-    purchases_collection = db['purchases']
-    logger.info("Conexión a MongoDB establecida con éxito")
-except Exception as e:
-    logger.error(f"Error al conectar a MongoDB: {str(e)}")
-    raise Exception("No se pudo conectar a MongoDB")
-
-# Eliminar índice obsoleto 'username_1' si existe
-try:
-    users_collection.drop_index("username_1")
-except:
-    pass
-
-# Asegurar índices únicos
-users_collection.create_index("numero_documento", unique=True)
-users_collection.create_index("correo", unique=True)
-products_collection.create_index("product_id", unique=True)
-stock_collection.create_index([("nombre_producto", 1), ("size", 1)], unique=True)
-
-# Inicializar un usuario admin
-def initialize_admin():
-    users_collection.update_many({}, {"$unset": {"username": ""}})
-    if not users_collection.find_one({"correo": "admin@huevosmaxcampos.com"}):
-        users_collection.insert_one({
-            "numero_documento": "1234567890",
-            "tipo_documento": "cedula",
-            "nombre_completo": "Admin Usuario",
-            "numero_contacto": "1234567890",
-            "correo": "admin@huevosmaxcampos.com",
-            "tipo_persona": "juridica",
-            "password": generate_password_hash("admin123")
-        })
-    logger.info("Usuario admin inicializado con éxito")
-
-initialize_admin()
-
-# Función para convertir ObjectId a string y limpiar datos
+# Función para serializar documentos de MongoDB
 def serialize_document(doc):
     if isinstance(doc, dict):
-        cleaned_doc = {}
-        for key, value in doc.items():
-            if key == '_id':
-                cleaned_doc[key] = str(value)
-            elif key != 'imagen':
-                cleaned_doc[key] = serialize_document(value)
-        return cleaned_doc
+        return {key: serialize_document(value) for key, value in doc.items()}
     elif isinstance(doc, list):
         return [serialize_document(item) for item in doc]
     elif isinstance(doc, ObjectId):
         return str(doc)
+    elif isinstance(doc, datetime):
+        return doc.isoformat()
     return doc
 
-# Manejador de errores global
-@app.errorhandler(Exception)
-def handle_exception(e):
-    error_message = f"Error inesperado: {str(e)}"
-    logger.error(error_message)
-    return render_template('error.html', error=error_message), 500
-
+# Ruta para iniciar sesión
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     logger.debug("Accediendo a la ruta /login")
@@ -123,24 +83,91 @@ def login():
         if request.method == 'POST':
             correo = request.form.get('correo')
             password = request.form.get('password')
+            logger.debug(f"Intento de login con correo: {correo}, password: {password}")
             user = users_collection.find_one({"correo": correo})
             if not user:
                 logger.warning(f"Correo no registrado: {correo}")
-                return render_template('login.html', error="Correo no registrado", signup_error=None)
-            if not check_password_hash(user['password'], password):
-                logger.warning(f"Contraseña incorrecta para el correo: {correo}")
-                return render_template('login.html', error="Contraseña incorrecta", signup_error=None)
+                return render_template('login.html', error="Correo no registrado", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
+            # Verificar la contraseña
+            hashed_password = user.get('password')
+            if not hashed_password:
+                logger.warning(f"El usuario {correo} no tiene contraseña registrada")
+                return render_template('login.html', error="Error en la cuenta: Contraseña no registrada", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
+            try:
+                if not check_password_hash(hashed_password, password):
+                    logger.warning(f"Contraseña incorrecta para el correo: {correo}")
+                    return render_template('login.html', error="Contraseña incorrecta", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
+            except Exception as e:
+                logger.error(f"Error al verificar contraseña para {correo}: {str(e)}")
+                return render_template('login.html', error="Error al verificar la contraseña", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
+            # Configurar sesión
             session['logged_in'] = True
             session['correo'] = correo
             session['tipo_persona'] = user['tipo_persona']
             session['numero_documento'] = user['numero_documento']
             logger.info(f"Usuario {correo} ha iniciado sesión correctamente.")
             return redirect(url_for('index'))
-        return render_template('login.html', error=None, signup_error=None)
+        return render_template('login.html', error=None, GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
     except Exception as e:
-        logger.error(f"Error en /login: {str(e)}")
-        raise e
+        logger.error(f"Error inesperado en /login: {str(e)}")
+        return render_template('login.html', error=f"Error inesperado: {str(e)}", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
 
+# Ruta para registro
+@app.route('/register', methods=['GET', 'POST'])
+def register_user():
+    logger.debug("Accediendo a la ruta /register")
+    if request.method == 'POST':
+        numero_documento = request.form.get('numero_documento')
+        nombre_completo = request.form.get('nombre_completo')
+        numero_contacto = request.form.get('numero_contacto')
+        correo = request.form.get('correo')
+        tipo_persona = request.form.get('tipo_persona')
+        password = request.form.get('password')
+
+        if not re.match(r'^\d+$', numero_documento):
+            logger.warning(f"Número de documento inválido: {numero_documento}")
+            return render_template('register.html', signup_error="Número de documento debe contener solo números")
+        if users_collection.find_one({"numero_documento": numero_documento}):
+            logger.warning(f"Número de documento ya registrado: {numero_documento}")
+            return render_template('register.html', signup_error="El número de documento ya está registrado")
+        if not nombre_completo or not re.match(r'^[a-zA-Z\s]+$', nombre_completo):
+            logger.warning(f"Nombre completo inválido: {nombre_completo}")
+            return render_template('register.html', signup_error="El nombre completo solo puede contener letras y espacios")
+        if not numero_contacto or not re.match(r'^\d{7,15}$', numero_contacto):
+            logger.warning(f"Número de contacto inválido: {numero_contacto}")
+            return render_template('register.html', signup_error="Número de contacto inválido (solo números, 7-15 dígitos)")
+        if not correo or not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', correo):
+            logger.warning(f"Correo inválido: {correo}")
+            return render_template('register.html', signup_error="Correo inválido")
+        if users_collection.find_one({"correo": correo}):
+            logger.warning(f"Correo ya registrado: {correo}")
+            return render_template('register.html', signup_error="El correo ya está registrado")
+        if tipo_persona not in ['natural', 'juridica']:
+            logger.warning(f"Tipo de persona inválido: {tipo_persona}")
+            return render_template('register.html', signup_error="Tipo de persona inválido")
+        if not password:
+            logger.warning("Contraseña vacía en /register")
+            return render_template('register.html', signup_error="La contraseña no puede estar vacía")
+
+        hashed_password = generate_password_hash(password)
+        users_collection.insert_one({
+            "tipo_documento": "cedula",
+            "numero_documento": numero_documento,
+            "nombre_completo": nombre_completo,
+            "numero_contacto": numero_contacto,
+            "correo": correo,
+            "tipo_persona": tipo_persona,
+            "password": hashed_password
+        })
+        session['logged_in'] = True
+        session['correo'] = correo
+        session['tipo_persona'] = tipo_persona
+        session['numero_documento'] = numero_documento
+        logger.info(f"Usuario registrado: {correo}")
+        return redirect(url_for('index'))
+    return render_template('register.html', signup_error=None)
+
+# Ruta para inicio de sesión con Google
 @app.route('/google-login', methods=['POST'])
 def google_login():
     logger.debug("Accediendo a la ruta /google-login")
@@ -176,6 +203,7 @@ def google_login():
         logger.error(f"Error inesperado en google-login: {str(e)}")
         return jsonify({"error": "Error al procesar el inicio de sesión con Google"}), 500
 
+# Ruta para establecer contraseña después de login con Google
 @app.route('/set-google-password', methods=['GET', 'POST'])
 def set_google_password():
     logger.debug("Accediendo a la ruta /set-google-password")
@@ -211,58 +239,7 @@ def set_google_password():
 
     return render_template('set_google_password.html', error=None)
 
-@app.route('/register', methods=['POST'])
-def register_user():
-    logger.debug("Accediendo a la ruta /register")
-    numero_documento = request.form.get('numero_documento')
-    nombre_completo = request.form.get('nombre_completo')
-    numero_contacto = request.form.get('numero_contacto')
-    correo = request.form.get('correo')
-    tipo_persona = request.form.get('tipo_persona')
-    password = request.form.get('password')
-
-    if not re.match(r'^\d+$', numero_documento):
-        logger.warning(f"Número de documento inválido: {numero_documento}")
-        return render_template('login.html', signup_error="Número de documento debe contener solo números", error=None)
-    if users_collection.find_one({"numero_documento": numero_documento}):
-        logger.warning(f"Número de documento ya registrado: {numero_documento}")
-        return render_template('login.html', signup_error="El número de documento ya está registrado", error=None)
-    if not nombre_completo or not re.match(r'^[a-zA-Z\s]+$', nombre_completo):
-        logger.warning(f"Nombre completo inválido: {nombre_completo}")
-        return render_template('login.html', signup_error="El nombre completo solo puede contener letras y espacios", error=None)
-    if not numero_contacto or not re.match(r'^\d{7,15}$', numero_contacto):
-        logger.warning(f"Número de contacto inválido: {numero_contacto}")
-        return render_template('login.html', signup_error="Número de contacto inválido (solo números, 7-15 dígitos)", error=None)
-    if not correo or not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', correo):
-        logger.warning(f"Correo inválido: {correo}")
-        return render_template('login.html', signup_error="Correo inválido", error=None)
-    if users_collection.find_one({"correo": correo}):
-        logger.warning(f"Correo ya registrado: {correo}")
-        return render_template('login.html', signup_error="El correo ya está registrado", error=None)
-    if tipo_persona not in ['natural', 'juridica']:
-        logger.warning(f"Tipo de persona inválido: {tipo_persona}")
-        return render_template('login.html', signup_error="Tipo de persona inválido", error=None)
-    if not password:
-        logger.warning("Contraseña vacía en /register")
-        return render_template('login.html', signup_error="La contraseña no puede estar vacía", error=None)
-
-    hashed_password = generate_password_hash(password)
-    users_collection.insert_one({
-        "tipo_documento": "cedula",
-        "numero_documento": numero_documento,
-        "nombre_completo": nombre_completo,
-        "numero_contacto": numero_contacto,
-        "correo": correo,
-        "tipo_persona": tipo_persona,
-        "password": hashed_password
-    })
-    session['logged_in'] = True
-    session['correo'] = correo
-    session['tipo_persona'] = tipo_persona
-    session['numero_documento'] = numero_documento
-    logger.info(f"Usuario registrado: {correo}")
-    return redirect(url_for('index'))
-
+# Ruta para editar perfil
 @app.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
     logger.debug("Accediendo a la ruta /edit_profile")
@@ -271,6 +248,9 @@ def edit_profile():
         return redirect(url_for('login'))
     correo = session.get('correo')
     user = users_collection.find_one({"correo": correo})
+    if not user:
+        logger.warning(f"Usuario no encontrado: {correo}")
+        return redirect(url_for('logout'))
     if request.method == 'POST':
         nuevo_numero_documento = request.form.get('numero_documento')
         nombre_completo = request.form.get('nombre_completo')
@@ -316,6 +296,7 @@ def edit_profile():
         return redirect(url_for('index'))
     return render_template('edit_profile.html', user=user, error=None)
 
+# Ruta para eliminar perfil
 @app.route('/delete_profile')
 def delete_profile():
     logger.debug("Accediendo a la ruta /delete_profile")
@@ -327,14 +308,11 @@ def delete_profile():
         logger.warning("Intento de eliminar el perfil del admin")
         return redirect(url_for('index'))
     users_collection.delete_one({"correo": correo})
-    session.pop('logged_in', None)
-    session.pop('correo', None)
-    session.pop('tipo_persona', None)
-    session.pop('numero_documento', None)
-    session.pop('google_email', None)
+    session.clear()
     logger.info(f"Perfil eliminado para el correo: {correo}")
     return redirect(url_for('login'))
 
+# Ruta para registrar producto (admin)
 @app.route('/register_product', methods=['GET', 'POST'])
 def register_product():
     logger.debug("Accediendo a la ruta /register_product")
@@ -401,6 +379,7 @@ def register_product():
             return render_template('register_product.html', error="Datos inválidos. Asegúrate de completar todos los campos correctamente.")
     return render_template('register_product.html', error=None)
 
+# Ruta para listar productos
 @app.route('/list_products')
 def list_products():
     logger.debug("Accediendo a la ruta /list_products")
@@ -408,11 +387,14 @@ def list_products():
         logger.warning("Intento de acceso a /list_products sin sesión iniciada")
         return redirect(url_for('login'))
     products = list(products_collection.find())
+    products = [serialize_document(product) for product in products]
     stocks = list(stock_collection.find())
+    stocks = [serialize_document(stock) for stock in stocks]
     stock_dict = {(stock['nombre_producto'], stock['size']): stock['cantidad'] for stock in stocks}
     logger.info(f"Stock dictionary passed to template: {stock_dict}")
     return render_template('list_products.html', products=products, stock_dict=stock_dict, numero_documento=session.get('numero_documento'))
 
+# Ruta para editar producto (admin)
 @app.route('/edit_product/<product_id>', methods=['GET', 'POST'])
 def edit_product(product_id):
     logger.debug(f"Accediendo a la ruta /edit_product/{product_id}")
@@ -426,6 +408,7 @@ def edit_product(product_id):
     if not product:
         logger.warning(f"Producto no encontrado: {product_id}")
         return redirect(url_for('list_products'))
+    product = serialize_document(product)
     if request.method == 'POST':
         try:
             nombre_producto = request.form.get('nombre_producto')
@@ -492,6 +475,7 @@ def edit_product(product_id):
             return render_template('edit_product.html', product=product, error="Datos inválidos. Asegúrate de completar todos los campos correctamente.")
     return render_template('edit_product.html', product=product, error=None)
 
+# Ruta para eliminar producto (admin)
 @app.route('/delete_product/<product_id>')
 def delete_product(product_id):
     logger.debug(f"Accediendo a la ruta /delete_product/{product_id}")
@@ -508,6 +492,7 @@ def delete_product(product_id):
     logger.info(f"Producto eliminado: {product_id}")
     return redirect(url_for('list_products'))
 
+# Ruta para ver imagen de producto
 @app.route('/view_image/<product_id>')
 def view_image(product_id):
     logger.debug(f"Accediendo a la ruta /view_image/{product_id}")
@@ -520,17 +505,15 @@ def view_image(product_id):
     logger.warning(f"Imagen no encontrada para el producto: {product_id}")
     return "Imagen no encontrada", 404
 
+# Ruta para cerrar sesión
 @app.route('/logout')
 def logout():
     logger.debug("Accediendo a la ruta /logout")
-    session.pop('logged_in', None)
-    session.pop('correo', None)
-    session.pop('tipo_persona', None)
-    session.pop('numero_documento', None)
-    session.pop('google_email', None)
+    session.clear()
     logger.info("Usuario ha cerrado sesión")
     return redirect(url_for('login'))
 
+# Ruta raíz (menú principal)
 @app.route('/')
 def index():
     logger.debug("Accediendo a la ruta /")
@@ -539,6 +522,7 @@ def index():
         return redirect(url_for('login'))
     return render_template('index.html', numero_documento=session.get('numero_documento'), tipo_persona=session.get('tipo_persona'))
 
+# Ruta para registrar stock (admin)
 @app.route('/register_stock', methods=['GET', 'POST'])
 def register_stock():
     logger.debug("Accediendo a la ruta /register_stock")
@@ -605,6 +589,7 @@ def register_stock():
             return render_template('register_stock.html', error=f"Error inesperado: {str(e)}", success=None, product_names=product_names, products=cleaned_products)
     return render_template('register_stock.html', error=None, success=None, product_names=product_names, products=cleaned_products)
 
+# Ruta para comprar productos
 @app.route('/buy', methods=['GET', 'POST'])
 def buy():
     logger.debug("Accediendo a la ruta /buy")
@@ -712,6 +697,7 @@ def buy():
     else:
         return redirect(url_for('list_products'))
 
+# Ruta para ver compras (admin)
 @app.route('/admin/purchases', methods=['GET', 'POST'])
 def admin_purchases():
     logger.debug("Accediendo a la ruta /admin/purchases")
@@ -731,6 +717,7 @@ def admin_purchases():
             search_email = request.form.get('email')
             if search_email:
                 purchases = list(purchases_collection.find({"correo": {"$regex": f"^{search_email}$", "$options": "i"}}))
+                purchases = [serialize_document(purchase) for purchase in purchases]
                 logger.info(f"Compras encontradas para {search_email}: {purchases}")
             else:
                 logger.warning("Correo vacío en búsqueda de compras")
@@ -739,8 +726,9 @@ def admin_purchases():
         return render_template('purchases.html', purchases=purchases, search_email=search_email, error=None)
     except Exception as e:
         logger.error(f"Error en admin_purchases: {str(e)}")
-        raise Exception(f"No se pudo cargar la plantilla purchases.html: {str(e)}")
+        return render_template('error.html', error=f"Error al cargar las compras: {str(e)}")
 
+# Función para generar factura PDF
 def generate_invoice(nombre_producto, tipo, tamano, cantidad, unidad):
     logger.debug(f"Generando factura para {nombre_producto}, {tipo}, {tamano}, {cantidad}, {unidad}")
     products = list(products_collection.find())
@@ -776,7 +764,7 @@ def generate_invoice(nombre_producto, tipo, tamano, cantidad, unidad):
        ,         
       / \        
      /   \       
-    /_____\      
+    /_____\
     """
     buffer = BytesIO()
     from reportlab.pdfgen import canvas

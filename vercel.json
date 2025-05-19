@@ -1,29 +1,14 @@
 {
-  "version": 2,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/app.py"
+    }
+  ],
   "builds": [
     {
-      "src": "api/app.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "15mb",
-        "buildCommand": "pip install -r requirements.txt",
-        "includeFiles": ["requirements.txt", "templates/**"]
-      }
+      "src": "/api/app.py",
+      "use": "@vercel/python"
     }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/app.py"
-    }
-  ],
-  "env": {
-    "PYTHON_VERSION": "3.9"
-  },
-  "functions": {
-    "api/app.py": {
-      "runtime": "python3.9",
-      "handler": "gunicorn -w 1 -k uvicorn.workers.UvicornWorker api.app:app"
-    }
-  }
+  ]
 }
