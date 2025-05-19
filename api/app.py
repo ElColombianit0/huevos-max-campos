@@ -71,7 +71,7 @@ def serialize_document(doc):
     elif isinstance(doc, ObjectId):
         return str(doc)
     elif isinstance(doc, datetime):
-        return doc.isoformat()
+        return doc.isoformat()  # Convertir datetime a string ISO para evitar problemas
     return doc
 
 # Ruta para iniciar sesión
