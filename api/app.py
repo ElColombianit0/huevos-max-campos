@@ -37,7 +37,6 @@ try:
         logger.error("MONGO_URI no está configurado en las variables de entorno")
         raise ValueError("MONGO_URI no está configurado")
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
-    # Probar la conexión
     client.server_info()
     logger.debug("Conexión a MongoDB exitosa")
     db = client['huevos_max_campos']
@@ -88,19 +87,13 @@ def login():
             if not user:
                 logger.warning(f"Correo no registrado: {correo}")
                 return render_template('login.html', error="Correo no registrado", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
-            # Verificar la contraseña
             hashed_password = user.get('password')
             if not hashed_password:
                 logger.warning(f"El usuario {correo} no tiene contraseña registrada")
                 return render_template('login.html', error="Error en la cuenta: Contraseña no registrada", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
-            try:
-                if not check_password_hash(hashed_password, password):
-                    logger.warning(f"Contraseña incorrecta para el correo: {correo}")
-                    return render_template('login.html', error="Contraseña incorrecta", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
-            except Exception as e:
-                logger.error(f"Error al verificar contraseña para {correo}: {str(e)}")
-                return render_template('login.html', error="Error al verificar la contraseña", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
-            # Configurar sesión
+            if not check_password_hash(hashed_password, password):
+                logger.warning(f"Contraseña incorrecta para el correo: {correo}")
+                return render_template('login.html', error="Contraseña incorrecta", GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID)
             session['logged_in'] = True
             session['correo'] = correo
             session['tipo_persona'] = user['tipo_persona']
@@ -183,6 +176,7 @@ def google_login():
             logger.warning("No se pudo obtener el correo del usuario desde Google")
             return jsonify({"error": "No se pudo obtener el correo del usuario"}), 400
 
+        # Verificar si el usuario ya existe
         user = users_collection.find_one({"correo": email})
         if user:
             session['logged_in'] = True
@@ -192,7 +186,9 @@ def google_login():
             logger.info(f"Usuario {email} ha iniciado sesión con Google")
             return jsonify({"success": True, "redirect": url_for('index')})
 
+        # Si el usuario no existe, almacenarlo temporalmente en la sesión para el formulario de contraseña
         session['google_email'] = email
+        session.pop('logged_in', None)  # Asegurar que no haya sesión activa previa
         logger.info(f"Usuario nuevo {email} redirigido a set_google_password")
         return jsonify({"success": True, "redirect": url_for('set_google_password')})
 
@@ -432,7 +428,7 @@ def edit_product(product_id):
                 return render_template('edit_product.html', product=product, error="El color solo puede contener letras y espacios")
             if not size or not re.match(r'^[a-zA-Z0-9\s]+$', size):
                 logger.warning(f"Tamaño inválido: {size}")
-                return render_template('edit_product.html', product=product, error="El tamaño debe ser alfanumérico (letras, números o espacios)")
+                return render_template('edit_product.html', product=project, error="El tamaño debe ser alfanumérico (letras, números o espacios)")
             if not descripcion:
                 logger.warning("Descripción vacía en /edit_product")
                 return render_template('edit_product.html', product=product, error="La descripción no puede estar vacía")
