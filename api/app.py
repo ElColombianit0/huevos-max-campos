@@ -165,20 +165,25 @@ def register_user():
 def google_login():
     logger.debug("Accediendo a la ruta /google-login")
     try:
+        logger.debug("Verificando token de Google...")
         token = request.form.get('id_token')
         if not token:
             logger.warning("No se proporcionó el token de Google")
             return jsonify({"error": "No se proporcionó el token de Google"}), 400
 
+        logger.debug(f"Token recibido: {token[:10]}...")  # Solo primeros 10 caracteres para no saturar logs
         idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), GOOGLE_CLIENT_ID)
+        logger.debug("Token verificado exitosamente")
         email = idinfo.get('email')
         if not email:
             logger.warning("No se pudo obtener el correo del usuario desde Google")
             return jsonify({"error": "No se pudo obtener el correo del usuario"}), 400
 
+        logger.debug(f"Correo obtenido: {email}")
         # Verificar si el usuario ya existe
         user = users_collection.find_one({"correo": email})
         if user:
+            logger.debug(f"Usuario encontrado: {email}")
             session['logged_in'] = True
             session['correo'] = email
             session['tipo_persona'] = user['tipo_persona']
@@ -187,6 +192,7 @@ def google_login():
             return jsonify({"success": True, "redirect": url_for('index')})
 
         # Si el usuario no existe, almacenarlo temporalmente en la sesión para el formulario de contraseña
+        logger.debug("Usuario no encontrado, redirigiendo a set_google_password")
         session['google_email'] = email
         session.pop('logged_in', None)  # Asegurar que no haya sesión activa previa
         logger.info(f"Usuario nuevo {email} redirigido a set_google_password")
@@ -197,43 +203,52 @@ def google_login():
         return jsonify({"error": "Token de Google inválido"}), 400
     except Exception as e:
         logger.error(f"Error inesperado en google-login: {str(e)}")
-        return jsonify({"error": "Error al procesar el inicio de sesión con Google"}), 500
+        return jsonify({"error": f"Error al procesar el inicio de sesión con Google: {str(e)}"}), 500
 
 # Ruta para establecer contraseña después de login con Google
 @app.route('/set-google-password', methods=['GET', 'POST'])
 def set_google_password():
     logger.debug("Accediendo a la ruta /set-google-password")
-    if 'google_email' not in session:
-        logger.warning("Intento de acceso a /set-google-password sin google_email en sesión")
-        return redirect(url_for('login'))
+    try:
+        if 'google_email' not in session:
+            logger.warning("Intento de acceso a /set-google-password sin google_email en sesión")
+            return redirect(url_for('login'))
 
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if not password:
-            logger.warning("Contraseña vacía en /set-google-password")
-            return render_template('set_google_password.html', error="La contraseña no puede estar vacía")
+        if request.method == 'POST':
+            password = request.form.get('password')
+            logger.debug(f"Contraseña recibida: {password}")
+            if not password:
+                logger.warning("Contraseña vacía en /set-google-password")
+                return render_template('set_google_password.html', error="La contraseña no puede estar vacía")
 
-        email = session.pop('google_email')
-        hashed_password = generate_password_hash(password)
+            email = session.pop('google_email')
+            logger.debug(f"Correo a registrar: {email}")
+            hashed_password = generate_password_hash(password)
+            logger.debug("Contraseña hasheada exitosamente")
 
-        users_collection.insert_one({
-            "tipo_documento": "cedula",
-            "numero_documento": "",
-            "nombre_completo": "",
-            "numero_contacto": "",
-            "correo": email,
-            "tipo_persona": "natural",
-            "password": hashed_password
-        })
+            logger.debug("Insertando nuevo usuario en la base de datos...")
+            users_collection.insert_one({
+                "tipo_documento": "cedula",
+                "numero_documento": "",
+                "nombre_completo": "",
+                "numero_contacto": "",
+                "correo": email,
+                "tipo_persona": "natural",
+                "password": hashed_password
+            })
+            logger.debug("Usuario insertado exitosamente")
 
-        session['logged_in'] = True
-        session['correo'] = email
-        session['tipo_persona'] = "natural"
-        session['numero_documento'] = ""
-        logger.info(f"Usuario {email} registrado con Google y contraseña establecida.")
-        return redirect(url_for('index'))
+            session['logged_in'] = True
+            session['correo'] = email
+            session['tipo_persona'] = "natural"
+            session['numero_documento'] = ""
+            logger.info(f"Usuario {email} registrado con Google y contraseña establecida.")
+            return redirect(url_for('index'))
 
-    return render_template('set_google_password.html', error=None)
+        return render_template('set_google_password.html', error=None)
+    except Exception as e:
+        logger.error(f"Error inesperado en /set-google-password: {str(e)}")
+        return render_template('set_google_password.html', error=f"Error inesperado: {str(e)}")
 
 # Ruta para editar perfil
 @app.route('/edit_profile', methods=['GET', 'POST'])
@@ -417,7 +432,7 @@ def edit_product(product_id):
             if not nombre_producto or not re.match(r'^[a-zA-Z\s]+$', nombre_producto):
                 logger.warning(f"Nombre de producto inválido: {nombre_producto}")
                 return render_template('edit_product.html', product=product, error="El nombre del producto solo puede contener letras y espacios")
-            if not nuevo_product_id or not re.match(r'^[a-zA-Z0-9]+$', nuevo_product_id):
+            if not nuevo_product_id or not re.match(r'^[a-zAZ0-9]+$', nuevo_product_id):
                 logger.warning(f"Nuevo ID de producto inválido: {nuevo_product_id}")
                 return render_template('edit_product.html', product=product, error="El ID del producto debe ser alfanumérico")
             if nuevo_product_id != product_id and products_collection.find_one({"product_id": nuevo_product_id}):
@@ -428,7 +443,7 @@ def edit_product(product_id):
                 return render_template('edit_product.html', product=product, error="El color solo puede contener letras y espacios")
             if not size or not re.match(r'^[a-zA-Z0-9\s]+$', size):
                 logger.warning(f"Tamaño inválido: {size}")
-                return render_template('edit_product.html', product=project, error="El tamaño debe ser alfanumérico (letras, números o espacios)")
+                return render_template('edit_product.html', product=product, error="El tamaño debe ser alfanumérico (letras, números o espacios)")
             if not descripcion:
                 logger.warning("Descripción vacía en /edit_product")
                 return render_template('edit_product.html', product=product, error="La descripción no puede estar vacía")
