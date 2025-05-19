@@ -71,7 +71,7 @@ def serialize_document(doc):
     elif isinstance(doc, ObjectId):
         return str(doc)
     elif isinstance(doc, datetime):
-        return doc.isoformat()  # Convertir datetime a string ISO para evitar problemas
+        return doc.isoformat()
     return doc
 
 # Ruta para iniciar sesión
@@ -150,7 +150,8 @@ def register_user():
             "numero_contacto": numero_contacto,
             "correo": correo,
             "tipo_persona": tipo_persona,
-            "password": hashed_password
+            "password": hashed_password,
+            "foto_perfil": None  # Campo para foto de perfil
         })
         session['logged_in'] = True
         session['correo'] = correo
@@ -238,7 +239,8 @@ def set_google_password():
                 "numero_contacto": "",
                 "correo": email,
                 "tipo_persona": "natural",
-                "password": hashed_password
+                "password": hashed_password,
+                "foto_perfil": None  # Campo para foto de perfil
             })
             logger.debug("Usuario insertado exitosamente")
 
@@ -272,6 +274,8 @@ def edit_profile():
         numero_contacto = request.form.get('numero_contacto')
         nuevo_correo = request.form.get('correo')
         tipo_persona = request.form.get('tipo_persona')
+        foto_perfil = request.files.get('foto_perfil') if request.files.get('foto_perfil') else None
+
         if not re.match(r'^\d+$', nuevo_numero_documento):
             logger.warning(f"Nuevo número de documento inválido: {nuevo_numero_documento}")
             return render_template('edit_profile.html', user=user, error="Número de documento debe contener solo números")
@@ -293,6 +297,13 @@ def edit_profile():
         if tipo_persona not in ['natural', 'juridica']:
             logger.warning(f"Nuevo tipo de persona inválido: {tipo_persona}")
             return render_template('edit_profile.html', user=user, error="Tipo de persona inválido")
+
+        # Procesar foto de perfil
+        foto_data = user.get('foto_perfil')
+        if foto_perfil and foto_perfil.filename:
+            foto_data = foto_perfil.read()
+            logger.debug(f"Foto de perfil subida: {foto_perfil.filename}")
+
         users_collection.update_one(
             {"correo": correo},
             {"$set": {
@@ -301,7 +312,8 @@ def edit_profile():
                 "nombre_completo": nombre_completo,
                 "numero_contacto": numero_contacto,
                 "correo": nuevo_correo,
-                "tipo_persona": tipo_persona
+                "tipo_persona": tipo_persona,
+                "foto_perfil": foto_data
             }}
         )
         session['correo'] = nuevo_correo
@@ -453,7 +465,7 @@ def edit_product(product_id):
                 return render_template('edit_product.html', product=product, error="La descripción no puede estar vacía")
             if valor_unitario <= 0:
                 logger.warning(f"Valor unitario inválido: {valor_unitario}")
-                return render_template('edit_product.html', product=product, error="El valor unitario debe ser mayor a cero")
+                return render_template('edit_profile.html', product=product, error="El valor unitario debe ser mayor a cero")
             imagen_data = product.get('imagen')
             if imagen:
                 imagen_data = imagen.read()
@@ -519,6 +531,19 @@ def view_image(product_id):
         )
     logger.warning(f"Imagen no encontrada para el producto: {product_id}")
     return "Imagen no encontrada", 404
+
+# Ruta para ver foto de perfil
+@app.route('/view_profile_photo/<correo>')
+def view_profile_photo(correo):
+    logger.debug(f"Accediendo a la ruta /view_profile_photo/{correo}")
+    user = users_collection.find_one({"correo": correo})
+    if user and user.get('foto_perfil'):
+        return send_file(
+            BytesIO(user['foto_perfil']),
+            mimetype='image/jpeg'
+        )
+    logger.warning(f"Foto de perfil no encontrada para el correo: {correo}")
+    return "Foto no encontrada", 404
 
 # Ruta para cerrar sesión
 @app.route('/logout')

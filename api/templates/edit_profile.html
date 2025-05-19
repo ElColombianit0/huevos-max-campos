@@ -10,6 +10,7 @@
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -17,109 +18,180 @@
             background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
             color: #fff;
         }
-
-        .main {
-            width: 350px;
+        h1 {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: #24243e;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 5px 20px 50px #000;
-        }
-
-        h1 {
-            font-size: 2em;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        form {
+            gap: 20px;
             width: 100%;
+            max-width: 500px;
+        }
+        form {
             display: flex;
             flex-direction: column;
             gap: 15px;
-        }
-
-        input, select {
             width: 100%;
-            height: 40px;
-            background: #e0dede;
+        }
+        label {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="email"], input[type="tel"] {
+            width: 100%;
             padding: 10px;
-            border: none;
-            outline: none;
-            border-radius: 5px;
             font-family: 'Jost', sans-serif;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background: #fff;
             color: #333;
         }
-
         select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            cursor: pointer;
-        }
-
-        button {
             width: 100%;
+            padding: 10px;
+            font-family: 'Jost', sans-serif;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background: #fff;
+            color: #333;
+        }
+        .photo-upload {
+            margin-top: 10px;
+        }
+        .photo-upload input[type="file"] {
+            width: 100%;
+        }
+        .camera-option {
+            margin-top: 10px;
+        }
+        .camera-option video {
+            width: 200px;
+            height: auto;
+            border-radius: 5px;
+        }
+        .camera-option button {
+            margin-top: 10px;
+        }
+        button {
+            width: 200px;
             height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             color: #fff;
             background: #573b8a;
+            font-family: 'Jost', sans-serif;
             font-size: 1em;
             font-weight: bold;
             border: none;
             border-radius: 5px;
-            transition: .2s ease-in;
             cursor: pointer;
+            transition: .2s ease-in;
         }
-
         button:hover {
             background: #6d44b8;
         }
-
-        .error {
-            color: red;
-            text-align: center;
-            margin-bottom: 10px;
+        p.error {
+            color: #ff5555;
+            font-size: 1em;
+            margin: 10px 0;
         }
-
-        .back-link {
+        a.back {
             margin-top: 20px;
             color: #6d44b8;
             font-size: 0.9em;
             text-decoration: none;
             font-weight: bold;
         }
-
-        .back-link:hover {
+        a.back:hover {
             color: #573b8a;
             text-decoration: underline;
+        }
+        .profile-photo {
+            margin-top: 20px;
+        }
+        .profile-photo img {
+            max-width: 150px;
+            border-radius: 50%;
         }
     </style>
 </head>
 <body>
-    <div class="main">
-        <h1>Editar Perfil</h1>
-        {% if error %}
-            <p class="error">{{ error }}</p>
-        {% endif %}
-        <form method="POST" action="{{ url_for('edit_profile') }}">
-            <input type="text" name="numero_documento" placeholder="Número de Cédula" value="{{ user.numero_documento }}" required>
-            <input type="text" name="nombre_completo" placeholder="Nombre Completo" value="{{ user.nombre_completo }}" required>
-            <input type="text" name="numero_contacto" placeholder="Número de Contacto" value="{{ user.numero_contacto }}" required>
-            <input type="email" name="correo" placeholder="Correo" value="{{ user.correo }}" required>
-            <select name="tipo_persona" required>
+    <h1>Editar Perfil</h1>
+    <div class="container">
+        <a href="/" class="back">Volver al inicio</a>
+        <form method="POST" enctype="multipart/form-data">
+            <label for="numero_documento">Número de Documento:</label>
+            <input type="text" id="numero_documento" name="numero_documento" value="{{ user.numero_documento }}" required>
+            <label for="nombre_completo">Nombre Completo:</label>
+            <input type="text" id="nombre_completo" name="nombre_completo" value="{{ user.nombre_completo }}" required>
+            <label for="numero_contacto">Número de Contacto:</label>
+            <input type="tel" id="numero_contacto" name="numero_contacto" value="{{ user.numero_contacto }}" required>
+            <label for="correo">Correo:</label>
+            <input type="email" id="correo" name="correo" value="{{ user.correo }}" required>
+            <label for="tipo_persona">Tipo de Persona:</label>
+            <select id="tipo_persona" name="tipo_persona" required>
                 <option value="natural" {% if user.tipo_persona == 'natural' %}selected{% endif %}>Natural</option>
                 <option value="juridica" {% if user.tipo_persona == 'juridica' %}selected{% endif %}>Jurídica</option>
             </select>
+            <div class="photo-upload">
+                <label for="foto_perfil">Subir Foto de Perfil (desde PC/Teléfono):</label>
+                <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*">
+            </div>
+            <div class="camera-option">
+                <label>Tomar Foto con Cámara:</label>
+                <video id="video" autoplay></video>
+                <button type="button" onclick="capturePhoto()">Capturar Foto</button>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <input type="hidden" id="foto_capturada" name="foto_perfil">
+            </div>
             <button type="submit">Guardar Cambios</button>
         </form>
-        <a href="{{ url_for('index') }}" class="back-link">Volver al Inicio</a>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        <div class="profile-photo">
+            {% if user.foto_perfil %}
+                <img src="{{ url_for('view_profile_photo', correo=user.correo) }}" alt="Foto de Perfil">
+            {% else %}
+                <p>No hay foto de perfil</p>
+            {% endif %}
+        </div>
     </div>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const fotoCapturada = document.getElementById('foto_capturada');
+
+        // Acceder a la cámara
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Error al acceder a la cámara: ", err);
+                    alert("No se pudo acceder a la cámara. Por favor, sube una foto desde tu dispositivo.");
+                });
+        }
+
+        // Capturar foto
+        function capturePhoto() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            fotoCapturada.value = dataUrl.split(',')[1]; // Guardar solo la parte base64
+            alert("Foto capturada con éxito. Guarda los cambios para aplicarla.");
+        }
+    </script>
 </body>
 </html>
